@@ -55,3 +55,14 @@ docs/_build/
 
 # PyBuilder
 target/
+
+data/
+docs/
+
+# Executables
+*.sh
+/word2vec/word-analogy
+/word2vec/word2vec
+/word2vec/compute-accuracy
+/word2vec/distance
+/word2vec/word2phrase
