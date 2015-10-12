@@ -67,27 +67,27 @@ void InitUnigramTable() {
   }
 }
 
-// Reads a single word from a file, assuming space + tab + EOL to be word boundaries
+// Reads a single word from a file, assuming space to be word boundary
 void ReadWord(char *word, FILE *fin) {
-  int a = 0, ch;
-  while (!feof(fin)) {
-    ch = fgetc(fin);
-    if (ch == 13) continue;
-    if ((ch == ' ') || (ch == '\t') || (ch == '\n')) {
-      if (a > 0) {
-        if (ch == '\n') ungetc(ch, fin);
-        break;
-      }
-      if (ch == '\n') {
-        strcpy(word, (char *)"</s>");
-        return;
-      } else continue;
+    int a = 0, ch;
+    while (!feof(fin)) {
+        ch = fgetc(fin);
+        if (ch == 13) continue;
+        if ((ch == ' ') || (ch == '.')) {
+            if (a > 0) {
+                if (ch == '\n' || ch == '.') ungetc(ch, fin);
+                break;
+            }
+            if (ch == '.') {
+                strcpy(word, (char *) ".");
+                return;
+            } else continue;
+        }
+        word[a] = ch;
+        a++;
+        if (a >= MAX_STRING - 1) a--;   // Truncate too long words
     }
-    word[a] = ch;
-    a++;
-    if (a >= MAX_STRING - 1) a--;   // Truncate too long words
-  }
-  word[a] = 0;
+    word[a] = 0;
 }
 
 // Returns hash value of a word
@@ -270,10 +270,10 @@ void LearnVocabFromTrainFile() {
     exit(1);
   }
   vocab_size = 0;
-  AddWordToVocab((char *)"</s>");
   while (1) {
     ReadWord(word, fin);
     if (feof(fin)) break;
+    if (!strcmp(word, ".")) continue;
     train_words++;
     if ((debug_mode > 1) && (train_words % 100000 == 0)) {
       printf("%lldK%c", train_words / 1000, 13);
@@ -360,10 +360,11 @@ void InitNet() {
 }
 
 void *TrainModelThread(void *id) {
-  long long a, b, d, cw, word, last_word, sentence_length = 0, sentence_position = 0;
+  long long a, b, d, cw, wordIndex, last_word, sentence_length = 0, sentence_position = 0;
   long long word_count = 0, last_word_count = 0, sen[MAX_SENTENCE_LENGTH + 1];
   long long l1, l2, c, target, label, local_iter = iter;
   unsigned long long next_random = (long long)id;
+  char word[MAX_STRING];
   real f, g;
   clock_t now;
   real *neu1 = (real *)calloc(layer1_size, sizeof(real));
@@ -386,18 +387,20 @@ void *TrainModelThread(void *id) {
     }
     if (sentence_length == 0) {
       while (1) {
-        word = ReadWordIndex(fi);
+		ReadWord(word, fi);
         if (feof(fi)) break;
-        if (word == -1) continue;
+        if (strcmp(word, ".")) break;
+        wordIndex = SearchVocab(word);
+        if (wordIndex == -1) continue;
         word_count++;
-        if (word == 0) break;
+        if (wordIndex == 0) break;
         // The subsampling randomly discards frequent words while keeping the ranking same
         if (sample > 0) {
-          real ran = (sqrt(vocab[word].cn / (sample * train_words)) + 1) * (sample * train_words) / vocab[word].cn;
+          real ran = (sqrt(vocab[wordIndex].cn / (sample * train_words)) + 1) * (sample * train_words) / vocab[wordIndex].cn;
           next_random = next_random * (unsigned long long)25214903917 + 11;
           if (ran < (next_random & 0xFFFF) / (real)65536) continue;
         }
-        sen[sentence_length] = word;
+        sen[sentence_length] = wordIndex;
         sentence_length++;
         if (sentence_length >= MAX_SENTENCE_LENGTH) break;
       }
@@ -413,8 +416,8 @@ void *TrainModelThread(void *id) {
       fseek(fi, file_size / (long long)num_threads * (long long)id, SEEK_SET);
       continue;
     }
-    word = sen[sentence_position];
-    if (word == -1) continue;
+    wordIndex = sen[sentence_position];
+    if (wordIndex == -1) continue;
     for (c = 0; c < layer1_size; c++) neu1[c] = 0;
     for (c = 0; c < layer1_size; c++) neu1e[c] = 0;
     next_random = next_random * (unsigned long long)25214903917 + 11;
@@ -433,16 +436,16 @@ void *TrainModelThread(void *id) {
       }
       if (cw) {
         for (c = 0; c < layer1_size; c++) neu1[c] /= cw;
-        if (hs) for (d = 0; d < vocab[word].codelen; d++) {
+        if (hs) for (d = 0; d < vocab[wordIndex].codelen; d++) {
           f = 0;
-          l2 = vocab[word].point[d] * layer1_size;
+          l2 = vocab[wordIndex].point[d] * layer1_size;
           // Propagate hidden -> output
           for (c = 0; c < layer1_size; c++) f += neu1[c] * syn1[c + l2];
           if (f <= -MAX_EXP) continue;
           else if (f >= MAX_EXP) continue;
           else f = expTable[(int)((f + MAX_EXP) * (EXP_TABLE_SIZE / MAX_EXP / 2))];
           // 'g' is the gradient multiplied by the learning rate
-          g = (1 - vocab[word].code[d] - f) * alpha;
+          g = (1 - vocab[wordIndex].code[d] - f) * alpha;
           // Propagate errors output -> hidden
           for (c = 0; c < layer1_size; c++) neu1e[c] += g * syn1[c + l2];
           // Learn weights hidden -> output
@@ -451,13 +454,13 @@ void *TrainModelThread(void *id) {
         // NEGATIVE SAMPLING
         if (negative > 0) for (d = 0; d < negative + 1; d++) {
           if (d == 0) {
-            target = word;
+            target = wordIndex;
             label = 1;
           } else {
             next_random = next_random * (unsigned long long)25214903917 + 11;
             target = table[(next_random >> 16) % table_size];
             if (target == 0) target = next_random % (vocab_size - 1) + 1;
-            if (target == word) continue;
+            if (target == wordIndex) continue;
             label = 0;
           }
           l2 = target * layer1_size;
@@ -489,16 +492,16 @@ void *TrainModelThread(void *id) {
         l1 = last_word * layer1_size;
         for (c = 0; c < layer1_size; c++) neu1e[c] = 0;
         // HIERARCHICAL SOFTMAX
-        if (hs) for (d = 0; d < vocab[word].codelen; d++) {
+        if (hs) for (d = 0; d < vocab[wordIndex].codelen; d++) {
           f = 0;
-          l2 = vocab[word].point[d] * layer1_size;
+          l2 = vocab[wordIndex].point[d] * layer1_size;
           // Propagate hidden -> output
           for (c = 0; c < layer1_size; c++) f += syn0[c + l1] * syn1[c + l2];
           if (f <= -MAX_EXP) continue;
           else if (f >= MAX_EXP) continue;
           else f = expTable[(int)((f + MAX_EXP) * (EXP_TABLE_SIZE / MAX_EXP / 2))];
           // 'g' is the gradient multiplied by the learning rate
-          g = (1 - vocab[word].code[d] - f) * alpha;
+          g = (1 - vocab[wordIndex].code[d] - f) * alpha;
           // Propagate errors output -> hidden
           for (c = 0; c < layer1_size; c++) neu1e[c] += g * syn1[c + l2];
           // Learn weights hidden -> output
@@ -507,13 +510,13 @@ void *TrainModelThread(void *id) {
         // NEGATIVE SAMPLING
         if (negative > 0) for (d = 0; d < negative + 1; d++) {
           if (d == 0) {
-            target = word;
+            target = wordIndex;
             label = 1;
           } else {
             next_random = next_random * (unsigned long long)25214903917 + 11;
             target = table[(next_random >> 16) % table_size];
             if (target == 0) target = next_random % (vocab_size - 1) + 1;
-            if (target == word) continue;
+            if (target == wordIndex) continue;
             label = 0;
           }
           l2 = target * layer1_size;
