@@ -8,7 +8,6 @@ def loadWord2VecVocabulary(filePath):
         firstLine = file.readline()
         embeddingsCount, embeddingSize = tuple(firstLine.split(' '))
         embeddingsCount, embeddingSize = int(embeddingsCount), int(embeddingSize)
-        embeddingFormat = '{0}f'.format(embeddingSize)
         wordIndexMap = {}
 
         log.info('Vocabulary size: {0}. Embedding size: {1}.', embeddingsCount, embeddingSize)
