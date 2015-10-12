@@ -1,12 +1,10 @@
 import log
 import kit
-import math
 import scipy.stats
 import numpy
 import pandas
 import re
 import vectors
-import pandas
 import os
 import random
 from matplotlib import colors

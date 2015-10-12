@@ -222,7 +222,7 @@ def loadEmbeddigns(embeddingsFilePath):
         embeddingSize = file.read(4)
         embeddingSize = struct.unpack('<i', embeddingSize)[0]
 
-        embeddings = np.empty((wordsCount, embeddingSize))
+        embeddings = numpy.empty((wordsCount, embeddingSize))
 
         format = '{0}f'.format(embeddingSize)
         for wordIndex in range(0, wordsCount):
