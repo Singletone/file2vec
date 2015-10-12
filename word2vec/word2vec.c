@@ -146,7 +146,7 @@ void SortVocab() {
   int a, size;
   unsigned int hash;
   // Sort the vocabulary and keep </s> at the first position
-  qsort(&vocab[1], vocab_size - 1, sizeof(struct vocab_word), VocabCompare);
+  qsort(&vocab[0], vocab_size, sizeof(struct vocab_word), VocabCompare);
   for (a = 0; a < vocab_hash_size; a++) vocab_hash[a] = -1;
   size = vocab_size;
   train_words = 0;
@@ -389,7 +389,7 @@ void *TrainModelThread(void *id) {
       while (1) {
 		ReadWord(word, fi);
         if (feof(fi)) break;
-        if (strcmp(word, ".")) break;
+        if (!strcmp(word, ".")) break;
         wordIndex = SearchVocab(word);
         if (wordIndex == -1) continue;
         word_count++;
