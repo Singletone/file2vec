@@ -61,6 +61,7 @@ docs/
 
 # Executables
 *.sh
+*.o
 /word2vec/word-analogy
 /word2vec/word2vec
 /word2vec/compute-accuracy
