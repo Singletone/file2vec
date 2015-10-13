@@ -20,7 +20,7 @@ def filterPage(page):
     if pageText.startswith('#redirect'):
         return False
 
-    if len(pageText) < 2500:
+    if len(pageText) < 10:
         return False
 
     return True
@@ -29,7 +29,7 @@ def filterPage(page):
 def cleanPage(page):
     pageName, pageText = page
 
-    pageName = re.sub('[^a-zA-Z0-9\s\(\)]', '', pageName).strip()
+    pageName = re.sub('[^_a-zA-Z0-9\s\(\)]', '', pageName).strip()
 
     restrictedHeaders = ['see also', 'footnotes', 'references', 'further reading', 'external links', 'books']
 
@@ -69,7 +69,10 @@ def cleanPage(page):
 def savePage(dumpDirectoryPath, pageName, pageText):
     filePath = os.path.join(dumpDirectoryPath, pageName + '.txt')
 
-    with open(filePath, 'wb+') as file:
+    with open(filePath, 'a+') as file:
+        if file.tell():
+            file.write(' ')
+
         file.write(pageText)
 
 
@@ -96,40 +99,62 @@ def unpackDump(dumpPath, cleanText):
     return dumpName, pages
 
 
-def prepareWikipediaDumps(inputDirectoryPath, outputFilePath, cleanText=True):
-    if os.path.exists(outputFilePath):
+def prepareWikipediaDumps(inputDirectoryPath, outputDirectoryPath=None, outputFilePath=None, cleanText=True):
+    if outputDirectoryPath is not None:
+        if os.path.exists(outputDirectoryPath):
+            shutil.rmtree(outputDirectoryPath, ignore_errors=True)
+        os.mkdir(outputDirectoryPath)
+        os.chown(outputDirectoryPath, 1000, 1000)
+    elif outputFilePath is not None and os.path.exists(outputFilePath):
         os.remove(outputFilePath)
-        log.info('Old file {0} has been removed.', outputFilePath)
 
     pathName = inputDirectoryPath + '/*wiki*.txt.gz'
     dumpPaths = glob.glob(pathName)
     dumpsCount = len(dumpPaths)
+    pagesCount = 0
     log.info('Found {0} Wikipedia dumps.', dumpsCount)
 
     startTime = time.time()
 
-    with open(outputFilePath, mode='w+') as outputFile:
-        for dumpIndex, dumpPath in enumerate(dumpPaths):
-            dumpName, pages = unpackDump(dumpPath, cleanText)
+    for dumpIndex, dumpPath in enumerate(dumpPaths):
+        dumpName, pages = unpackDump(dumpPath, cleanText)
+
+        if any(pages):
+            if outputDirectoryPath is not None:
+                pageDirectoryPath = os.path.join(outputDirectoryPath, dumpName)
+                os.mkdir(pageDirectoryPath)
+                os.chown(pageDirectoryPath, 1000, 1000)
 
             for pageName, pageText in pages:
-                outputFile.write(pageText)
+                if outputDirectoryPath is not None:
+                    outputFilePath = os.path.join(pageDirectoryPath, pageName + '.txt')
+
+                with open(outputFilePath, 'a+') as outputFile:
+                    if outputFile.tell():
+                        outputFile.write(' ')
+
+                    outputFile.write(pageText)
+
+                pagesCount += 1
 
             currentTime = time.time()
             elapsed = currentTime - startTime
             secondsPerFile = elapsed / (dumpIndex + 1)
 
-            log.progress('Unpacking Wikipedia dumps: {0:.3f}%. Elapsed: {1}. ({2:.3f} sec/dump)',
+            log.progress('Unpacking Wikipedia dumps: {0:.3f}%. Elapsed: {1} ({2:.3f} sec/dump). Pages: {3}.',
                          dumpIndex + 1,
                          dumpsCount,
                          log.delta(elapsed),
-                         secondsPerFile)
+                         secondsPerFile,
+                         pagesCount)
 
     log.lineBreak()
     log.info('Processing complete.')
 
 if __name__ == '__main__':
-    inputDirectoryPath = '../data/Wikipedia/Raw'
-    outputDirectoryPath = '../data/Wikipedia/Prepared/wikipedia.txt'
+    inputDirectoryPath = '../data/Drosophila/Raw'
+    outputDirectoryPath = '../data/Drosophila/Prepared'
+    outputFilePath = '../data/Drosophila/Concatenated/drosophila.txt'
 
-    prepareWikipediaDumps(inputDirectoryPath, outputDirectoryPath)
+    # prepareWikipediaDumps(inputDirectoryPath, outputDirectoryPath=outputDirectoryPath)
+    prepareWikipediaDumps(inputDirectoryPath, outputFilePath=outputFilePath)

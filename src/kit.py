@@ -1,6 +1,7 @@
 import log
 import struct
 import io
+import numpy
 
 
 def loadWord2VecVocabulary(filePath):
@@ -55,7 +56,7 @@ def loadWord2VecEmbeddings(filePath):
 
                 if not char:
                     log.lineBreak()
-                    return wordIndexMap, embeddings
+                    return wordIndexMap, numpy.asarray(embeddings)
 
                 if char == ' ':
                     word = word.strip()

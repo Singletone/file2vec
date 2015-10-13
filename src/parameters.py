@@ -130,7 +130,7 @@ def getFileVocabularySize(fileVocabularyPath):
         return itemsCount
 
 
-def dumpWordVocabulary(vocabulary, vocabularyFilePath):
+def dumpWordVocabulary(vocabulary, vocabularyFilePath, dumpFrequency=True):
     if os.path.exists(vocabularyFilePath):
         os.remove(vocabularyFilePath)
 
@@ -143,14 +143,21 @@ def dumpWordVocabulary(vocabulary, vocabularyFilePath):
         for key, value in vocabulary.items():
             keyLength = len(key)
             keyLength = struct.pack('i', keyLength)
-            index, frequency = value
+
+            if dumpFrequency:
+                index, frequency = value
+                frequency = struct.pack('i', frequency)
+            else:
+                index = value
+
             index = struct.pack('i', index)
-            frequency = struct.pack('i', frequency)
 
             file.write(keyLength)
             file.write(key)
             file.write(index)
-            file.write(frequency)
+
+            if dumpFrequency:
+                file.write(frequency)
 
             itemIndex += 1
             log.progress('Dumping word vocabulary: {0:.3f}%.', itemIndex, itemsCount)
@@ -160,7 +167,7 @@ def dumpWordVocabulary(vocabulary, vocabularyFilePath):
         log.lineBreak()
 
 
-def loadWordVocabulary(vocabularyFilePath, loadFrequencies=True):
+def loadWordVocabulary(vocabularyFilePath):
     vocabulary = collections.OrderedDict()
 
     with open(vocabularyFilePath, 'rb') as file:
@@ -176,10 +183,7 @@ def loadWordVocabulary(vocabularyFilePath, loadFrequencies=True):
             index = file.read(4)
             index = struct.unpack('i', index)[0]
 
-            frequency = file.read(4)
-            frequency = struct.unpack('i', frequency)[0]
-
-            vocabulary[word] = (index, frequency) if loadFrequencies else index
+            vocabulary[word] = index
 
             log.progress('Loading word vocabulary: {0:.3f}%.', itemIndex + 1, itemsCount)
 
