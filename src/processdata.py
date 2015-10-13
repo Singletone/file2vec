@@ -112,6 +112,8 @@ def processData(inputDirectoryPath, wordVocabularyPath, fileVocabularyPath, cont
         contextsFile.write(struct.pack('i', contextsCount))
         contextsFile.flush()
 
+    parameters.dumpFileVocabulary(fileVocabulary, fileVocabularyPath)
+
 
 if __name__ == '__main__':
     inputDirectoryPath = '../data/Drosophila/Prepared'
