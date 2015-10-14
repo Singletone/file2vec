@@ -122,6 +122,31 @@ def loadFileVocabulary(vocabularyFilePath):
     return vocabulary
 
 
+def loadIndexFileMap(vocabularyFilePath):
+    with open(vocabularyFilePath, 'rb') as file:
+        itemsCount = file.read(4)
+        itemsCount = struct.unpack('i', itemsCount)[0]
+
+        indexFileMap = [None] * itemsCount
+
+        for itemIndex in range(0, itemsCount):
+            wordLength = file.read(4)
+            wordLength = struct.unpack('i', wordLength)[0]
+
+            word = file.read(wordLength)
+
+            index = file.read(4)
+            index = struct.unpack('i', index)[0]
+
+            indexFileMap[index] = word
+
+            log.progress('Loading index-file map: {0:.3f}%.', itemIndex + 1, itemsCount)
+
+        log.lineBreak()
+
+        return indexFileMap
+
+
 def getFileVocabularySize(fileVocabularyPath):
     with open(fileVocabularyPath, 'rb') as file:
         itemsCount = file.read(4)
@@ -190,6 +215,31 @@ def loadWordVocabulary(vocabularyFilePath):
         log.lineBreak()
 
     return vocabulary
+
+
+def loadIndexWordMap(vocabularyFilePath):
+    with open(vocabularyFilePath, 'rb') as file:
+        itemsCount = file.read(4)
+        itemsCount = struct.unpack('i', itemsCount)[0]
+
+        indexWordMap = [None] * itemsCount
+
+        for itemIndex in range(0, itemsCount):
+            wordLength = file.read(4)
+            wordLength = struct.unpack('i', wordLength)[0]
+
+            word = file.read(wordLength)
+
+            index = file.read(4)
+            index = struct.unpack('i', index)[0]
+
+            indexWordMap[index] = word
+
+            log.progress('Loading index-word map: {0:.3f}%.', itemIndex + 1, itemsCount)
+
+        log.lineBreak()
+
+        return indexWordMap
 
 
 def getWordVocabularySize(wordVocabularyPath):
