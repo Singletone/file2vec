@@ -11,7 +11,7 @@
 #  Copyright (c) 2008 Tilburg University. All rights reserved.
 
 import numpy as Math
-from matplotlib import pyplot as plt
+
 import log
 
 
@@ -147,7 +147,7 @@ def tsne(X=Math.array([]), no_dims=2, initial_dims=50, perplexity=30.0, epochs=1
         # Compute current value of cost function
         if (iter + 1) % 10 == 0:
             C = Math.sum(P * Math.log(P / Q));
-            log.progress('Plotting embeddings: {0}%. Error: {1}',
+            log.progress('Plotting embeddings: {0:.3f}%. Error: {1:.3f}.',
                          iter + 1, epochs, C)  # Stop lying about P-values
         if iter == 100:
             P = P / 4;

@@ -372,6 +372,7 @@ def plotEmbeddings(indexMap, embeddings):
     for index, fileName in enumerate(fileNames):
         axis.annotate(fileName, (lowDimEmbeddingsX[index] + 5,lowDimEmbeddingsY[index] + 5))
 
+    plt.grid()
     plt.show()
 
 

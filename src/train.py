@@ -1,8 +1,10 @@
 from numpy.random import randn as random
-import numpy
+import time
+
 import theano
 import theano.tensor as T
 
+import log
 import parameters
 import validation
 
@@ -43,8 +45,9 @@ class ParagraphVectorsModel:
         return self.getFileEmbeddings([item])[0]
 
 
-    def train(self, fileIndices, wordIndices, targetWordIndices, miniBatchSize, learningRate):
+    def train(self, fileIndices, wordIndices, miniBatchSize, learningRate):
         pass
+
 
 
     def dump(self, fileEmbeddingsPath):
@@ -72,9 +75,17 @@ def trainFileEmbeddings(fileVocabularyPath, wordVocabularyPath, wordEmbeddingsFi
         for superBatchIndex in xrange(0, superBatchesCount):
             contextSuperBatch = contextProvider[superBatchIndex * superBatchSize:(superBatchIndex + 1) * superBatchSize]
 
-            fileIndices, wordIndices, targetWordIndices = contextSuperBatch[:,1], contextSuperBatch[:,1:-1], contextSuperBatch[:,-1]
+            fileIndices, wordIndices = contextSuperBatch[:,0], contextSuperBatch[:,1:]
 
-            model.train(fileIndices, wordIndices, targetWordIndices, miniBatchSize, learningRate)
+            model.train(fileIndices, wordIndices, miniBatchSize, learningRate)
+
+            log.progress('Training model: {0:.3f}%.',
+                         epoch * superBatchesCount + superBatchIndex + 1,
+                         epochs * superBatchesCount)
+
+            time.sleep(0.01)
+
+    log.lineBreak()
 
     model.dump(fileEmbeddingsPath)
 
