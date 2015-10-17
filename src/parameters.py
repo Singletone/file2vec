@@ -155,7 +155,7 @@ def getFileVocabularySize(fileVocabularyPath):
         return itemsCount
 
 
-def dumpWordVocabulary(vocabulary, vocabularyFilePath, dumpFrequency=True):
+def dumpWordVocabulary(vocabulary, vocabularyFilePath):
     if os.path.exists(vocabularyFilePath):
         os.remove(vocabularyFilePath)
 
@@ -168,21 +168,11 @@ def dumpWordVocabulary(vocabulary, vocabularyFilePath, dumpFrequency=True):
         for key, value in vocabulary.items():
             keyLength = len(key)
             keyLength = struct.pack('i', keyLength)
-
-            if dumpFrequency:
-                index, frequency = value
-                frequency = struct.pack('i', frequency)
-            else:
-                index = value
-
-            index = struct.pack('i', index)
+            index = struct.pack('i', value)
 
             file.write(keyLength)
             file.write(key)
             file.write(index)
-
-            if dumpFrequency:
-                file.write(frequency)
 
             itemIndex += 1
             log.progress('Dumping word vocabulary: {0:.3f}%.', itemIndex, itemsCount)
