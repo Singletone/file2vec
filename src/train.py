@@ -1,5 +1,6 @@
-from numpy.random import randn as random
+from theano.tensor.shared_randomstreams import RandomStreams
 
+import numpy
 import theano
 import theano.tensor as T
 
@@ -9,18 +10,76 @@ import validation
 
 
 class ParagraphVectorsModel:
-    def __init__(self, wordEmbeddings, contextSize, fileVocabularySize, fileEmbeddingSize):
+    def __init__(self, wordEmbeddings, fileVocabularySize, fileEmbeddingSize, negativeSamplesCount, contextSize):
         floatX = theano.config.floatX
+        empty = lambda *shape: numpy.empty(shape, dtype='int32')
 
-        self.fileVocabularySize = fileVocabularySize
+        wordEmbeddingsCount, wordEmbeddingSize = wordEmbeddings.shape
 
-        defaultFileEmbeddings = random(fileVocabularySize, fileEmbeddingSize).astype(dtype=floatX)
+        defaultFileEmbeddings = numpy.random.randn(fileVocabularySize, fileEmbeddingSize).astype(dtype=floatX)
         self.fileEmbeddings = theano.shared(defaultFileEmbeddings, name='fileEmbeddings', borrow=True)
 
-        self.wordEmbeddings = theano.shared(wordEmbeddings, name='wordEmbeddings', borrow=True)
+        defaultWordEmbeddings = numpy.asarray(wordEmbeddings, dtype=floatX)
+        self.wordEmbeddings = theano.shared(defaultWordEmbeddings, name='wordEmbeddings', borrow=True)
 
-        fileEmbeddingIndices = T.ivector('fileEmbeddingIndices')
-        fileEmbeddingSample = self.fileEmbeddings[fileEmbeddingIndices]
+        defaultWeight = numpy.random.randn(fileEmbeddingSize + contextSize * wordEmbeddingSize, wordEmbeddingsCount).astype(dtype=floatX)
+        self.weight = theano.shared(defaultWeight, name='weight', borrow=True)
+
+        defaultBias = numpy.random.randn(negativeSamplesCount + 1).astype(dtype=floatX)
+        self.bias = theano.shared(defaultBias, name='bias', borrow=True)
+
+        parameters = [self.fileEmbeddings, self.weight, self.bias]
+
+        fileIndex = T.ivector('fileIndex')
+        contextIndices = T.imatrix('contextIndices')
+        targetWordIndex = T.ivector('targetWordIndex')
+
+        # assert output is a single file embedding
+        fileEmbedding = self.fileEmbeddings[indexContext]
+
+        # assert output is N word embeddings
+        contextEmbeddings = self.wordEmbeddings[indexContext]
+
+        # assert output is same word embeddings in the same order
+        contextEmbeddings = T.flatten(contextEmbeddings)
+
+        # assert concatenation gives file embedding followed by flatten word embeddings
+        embeddings = T.concatenate([fileEmbedding, contextEmbeddings])
+
+        random = RandomStreams()
+        negativeSampleIndices = random.random_integers(negativeSamplesCount, 0, wordEmbeddingsCount - 1, dtype='int32')
+
+        targetWordIndices = T.concatenate([targetWordIndex, negativeSampleIndices])
+        # assert indexing will produce sub weight matrix of needed shape
+        subWeight = self.weight[:,targetWordIndices]
+
+        probabilities = T.nnet.softmax(T.dot(context, self.weight) + self.bias)
+        targetProbability = T.ivector('targetProbability')
+
+        cost = -T.mean(T.log(probabilities)[T.arange(targetProbability.shape[0]), 0])
+
+        learningRate = T.scalar('learningRate', dtype=floatX)
+
+        gradients = [T.grad(cost, wrt=p) for p in parameters]
+        updates = [(p, p - learningRate * g) for p, g in zip(parameters, gradients)]
+
+        miniBatchIndex = T.lscalar('miniBatchIndex')
+        miniBatchSize = T.iscalar('miniBatchSize')
+
+        self.fileInput = theano.shared(empty(1), borrow=True)
+        self.contextInput = theano.shared(empty(1,1), borrow=True)
+        self.targetOutput = theano.shared(empty(1), borrow=True)
+
+        self.trainModel = theano.function(
+            inputs=[miniBatchIndex, miniBatchSize, learningRate],
+            outputs=cost,
+            updates=updates,
+            givens={
+                fileIndex: self.fileInput[miniBatchIndex * miniBatchSize: (miniBatchIndex + 1) * miniBatchSize],
+                contextIndices: self.contextInput[miniBatchIndex * miniBatchSize: (miniBatchIndex + 1) * miniBatchSize],
+                targetProbability: self.targetOutput[miniBatchIndex * miniBatchSize: (miniBatchIndex + 1) * miniBatchSize]
+            }
+        )
 
         self.getFileEmbeddings = theano.function(
             inputs=[fileEmbeddingIndices],
@@ -44,8 +103,21 @@ class ParagraphVectorsModel:
         return self.getFileEmbeddings([item])[0]
 
 
-    def train(self, fileIndices, wordIndices, targetWordIndicis, miniBatchSize, learningRate):
-        pass
+    def train(self, fileIndices, wordIndices, trainingTargetOutput, miniBatchSize, learningRate):
+        asarray = lambda x: numpy.asarray(x, dtype='int32')
+
+        wordIndices = asarray(wordIndices)
+        trainingTargetOutput = asarray(trainingTargetOutput)
+
+        self.fileInput.set_value(fileIndices)
+        self.contextInput.set_value(wordIndices)
+        self.targetOutput.set_value(trainingTargetOutput)
+
+        trainInputSize = wordIndices.shape[0]
+        trainingBatchesCount = trainInputSize / miniBatchSize + int(trainInputSize % miniBatchSize > 0)
+
+        for trainingBatchIndex in xrange(0, trainingBatchesCount):
+            self.trainModel(trainingBatchIndex, miniBatchSize, learningRate)
 
 
 
@@ -55,7 +127,7 @@ class ParagraphVectorsModel:
 
 
 def trainFileEmbeddings(fileIndexMapFilePath, wordIndexMapFilePath, wordEmbeddingsFilePath, contextsPath,
-                        fileEmbeddingsPath, fileEmbeddingSize, epochs, superBatchSize, miniBatchSize, learningRate):
+                        fileEmbeddingsPath, fileEmbeddingSize, epochs, superBatchSize, miniBatchSize, learningRate, negativeSamplesCount):
     fileVocabulary = parameters.loadIndexMap(fileIndexMapFilePath)
     fileVocabularySize = len(fileVocabulary)
 
@@ -67,7 +139,7 @@ def trainFileEmbeddings(fileIndexMapFilePath, wordIndexMapFilePath, wordEmbeddin
     contextProvider = parameters.IndexContextProvider(contextsPath)
     contextsCount, contextSize = contextProvider.contextsCount, contextProvider.contextSize
 
-    model = ParagraphVectorsModel(wordEmbeddings, contextSize, fileVocabularySize, fileEmbeddingSize)
+    model = ParagraphVectorsModel(wordEmbeddings, fileVocabularySize, fileEmbeddingSize, negativeSamplesCount, contextSize - 1)
     fileEmbeddingsBefore = model[:]
 
     superBatchesCount = contextsCount / superBatchSize + 1
@@ -105,5 +177,6 @@ if __name__ == '__main__':
         epochs = 100,
         superBatchSize = 1000,
         miniBatchSize = 50,
-        learningRate=0.13)
+        learningRate = 0.13,
+        negativeSamplesCount = 5)
 
