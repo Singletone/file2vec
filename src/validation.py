@@ -351,12 +351,12 @@ def compareHistories(metricName, *metricsHistoryPaths):
     plt.show()
 
 
-def plotEmbeddings(indexMap, embeddings):
+def plotEmbeddings(fileIndexMap, embeddings):
     embeddingsCount, embeddingSize = embeddings.shape
     embeddings = numpy.asarray(embeddings, 'float64')
     lowDimEmbeddings = tsne.tsne(embeddings, 2, embeddingSize, 20.0, 1000)
 
-    filePaths = indexMap.keys()
+    filePaths = fileIndexMap.keys()
     fileNames = [os.path.basename(filePath).split('.')[0] for filePath in filePaths]
 
     labels = set(fileNames)
@@ -374,6 +374,36 @@ def plotEmbeddings(indexMap, embeddings):
         axis.annotate(fileName, (lowDimEmbeddingsX[index],lowDimEmbeddingsY[index]))
 
     plt.grid()
+    plt.show()
+
+
+def compareEmbeddings(indexMap, embeddingsList):
+    filePaths = indexMap.keys()
+    fileNames = [os.path.basename(filePath).split('.')[0] for filePath in filePaths]
+
+    labels = set(fileNames)
+    labels = zip(labels, numpy.arange(0, len(labels)))
+    labels = [(label, index) for label, index in labels]
+    labels = dict(labels)
+    labels = [labels[fileName] for fileName in fileNames]
+
+    figure, axises = plt.subplots(1, 2)
+    for embeddings, axis in zip(embeddingsList, axises):
+        embeddingsCount, embeddingSize = embeddings.shape
+        embeddings = numpy.asarray(embeddings, 'float64')
+        lowDimEmbeddings = tsne.tsne(embeddings, 2, embeddingSize, 20.0, 1000)
+
+        lowDimEmbeddingsX, lowDimEmbeddingsY = lowDimEmbeddings[:,0], lowDimEmbeddings[:,1]
+
+        axis.grid()
+        axis.scatter(lowDimEmbeddingsX, lowDimEmbeddingsY, 20, labels)
+
+        for index, fileName in enumerate(fileNames):
+            axis.annotate(fileName, (lowDimEmbeddingsX[index],lowDimEmbeddingsY[index]))
+
+    figureManager = plt.get_current_fig_manager()
+    figureManager.resize(*figureManager.window.maxsize())
+
     plt.show()
 
 

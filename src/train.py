@@ -68,6 +68,8 @@ def trainFileEmbeddings(fileIndexMapFilePath, wordIndexMapFilePath, wordEmbeddin
     contextsCount, contextSize = contextProvider.contextsCount, contextProvider.contextSize
 
     model = ParagraphVectorsModel(wordEmbeddings, contextSize, fileVocabularySize, fileEmbeddingSize)
+    fileEmbeddingsBefore = model[:]
+
     superBatchesCount = contextsCount / superBatchSize + 1
 
     for epoch in xrange(0, epochs):
@@ -86,8 +88,8 @@ def trainFileEmbeddings(fileIndexMapFilePath, wordIndexMapFilePath, wordEmbeddin
 
     model.dump(fileEmbeddingsPath)
 
-    fileEmbeddings = model[:]
-    validation.plotEmbeddings(fileVocabulary, fileEmbeddings)
+    fileEmbeddingsAfter = model[:]
+    validation.compareEmbeddings(fileVocabulary, [fileEmbeddingsBefore, fileEmbeddingsAfter])
 
     model.dump(fileEmbeddingsPath)
 
