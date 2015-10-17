@@ -1,13 +1,11 @@
 import os
 import glob
-import log
 import time
 import re
 import struct
 import io
-import collections
-import math
-import whitelist
+
+import log
 import parameters
 
 
@@ -53,23 +51,23 @@ class WordContextProvider:
                     yield window
 
 
-def processData(inputDirectoryPath, wordEmbeddingsMapPath, fileVocabularyPath, wordVocabularyPath, wordEmbeddingsPath, contextsPath, contextSize):
+def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath, wordIndexMapFilePath, wordEmbeddingsFilePath, contextsPath, windowSize):
     if os.path.exists(contextsPath):
         os.remove(contextsPath)
 
     fileContextSize = 1
-    wordContextSize = contextSize - fileContextSize
+    wordContextSize = windowSize - fileContextSize
 
-    fileVocabulary = collections.OrderedDict()
-    wordIndexMap = collections.OrderedDict()
-    w2vWordIndexMap = parameters.loadW2VParameters(wordEmbeddingsMapPath, loadEmbeddings=False)
+    fileIndexMap = {}
+    wordIndexMap = {}
+    w2vWordIndexMap = parameters.loadW2VParameters(w2vEmbeddingsFilePath, loadEmbeddings=False)
 
     if os.path.exists(contextsPath):
         os.remove(contextsPath)
 
     with open(contextsPath, 'wb+') as contextsFile:
         contextsFile.write(struct.pack('i', 0)) # this is a placeholder for contexts count
-        contextsFile.write(struct.pack('i', contextSize))
+        contextsFile.write(struct.pack('i', windowSize))
 
         pathName = inputDirectoryPath + '/*/*.txt'
         textFilePaths = glob.glob(pathName)
@@ -77,11 +75,11 @@ def processData(inputDirectoryPath, wordEmbeddingsMapPath, fileVocabularyPath, w
         textFileCount = len(textFilePaths)
         startTime = time.time()
 
-        contextFormat = '{0}i'.format(contextSize)
+        contextFormat = '{0}i'.format(windowSize)
         contextsCount = 0
 
         for textFileIndex, textFilePath in enumerate(textFilePaths):
-            fileVocabulary[textFilePath] = textFileIndex
+            fileIndexMap[textFilePath] = textFileIndex
 
             contextProvider = WordContextProvider(textFilePath)
             for wordContext in contextProvider.next(wordContextSize):
@@ -118,17 +116,16 @@ def processData(inputDirectoryPath, wordEmbeddingsMapPath, fileVocabularyPath, w
         contextsFile.write(struct.pack('i', contextsCount))
         contextsFile.flush()
 
-    parameters.dumpFileVocabulary(fileVocabulary, fileVocabularyPath)
-    parameters.pruneW2VEmbeddings(wordEmbeddingsMapPath, wordVocabularyPath, wordEmbeddingsPath, mask=wordIndexMap)
+    parameters.dumpIndexMap(fileIndexMap, fileIndexMapFilePath)
+    parameters.pruneW2VEmbeddings(w2vEmbeddingsFilePath, wordIndexMapFilePath, wordEmbeddingsFilePath, mask=wordIndexMap)
 
 
 if __name__ == '__main__':
-    inputDirectoryPath = '../data/Drosophila/Prepared'
-    wordEmbeddingsMapPath = '../data/Drosophila/Processed/drosophila_w2v.bin'
-    fileVocabularyPath = '../data/Drosophila/Parameters/file_vocabulary.bin'
-    wordVocabularyPath = '../data/Drosophila/Parameters/word_vocabulary.bin'
-    wordEmbeddingsPath = '../data/Drosophila/Parameters/word_embeddings.bin'
-    contextsPath = '../data/Drosophila/Processed/contexts.bin'
-    contextSize = 7
-
-    processData(inputDirectoryPath, wordEmbeddingsMapPath, fileVocabularyPath, wordVocabularyPath, wordEmbeddingsPath, contextsPath, contextSize)
+    processData(
+        inputDirectoryPath = '../data/Drosophila/Prepared',
+        w2vEmbeddingsFilePath = '../data/Drosophila/Processed/wiki_full_s100_w7_n7.bin',
+        fileIndexMapFilePath = '../data/Drosophila/Parameters/file_index_map.bin',
+        wordIndexMapFilePath = '../data/Drosophila/Parameters/word_index_map.bin',
+        wordEmbeddingsFilePath = '../data/Drosophila/Parameters/word_embeddings.bin',
+        contextsPath = '../data/Drosophila/Processed/contexts.bin',
+        windowSize = 7)

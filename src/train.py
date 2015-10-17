@@ -1,5 +1,4 @@
 from numpy.random import randn as random
-import time
 
 import theano
 import theano.tensor as T
@@ -45,7 +44,7 @@ class ParagraphVectorsModel:
         return self.getFileEmbeddings([item])[0]
 
 
-    def train(self, fileIndices, wordIndices, miniBatchSize, learningRate):
+    def train(self, fileIndices, wordIndices, targetWordIndicis, miniBatchSize, learningRate):
         pass
 
 
@@ -55,15 +54,15 @@ class ParagraphVectorsModel:
         parameters.dumpEmbeddings(fileEmbeddings, fileEmbeddingsPath)
 
 
-def trainFileEmbeddings(fileVocabularyPath, wordVocabularyPath, wordEmbeddingsFilePath, contextsPath,
+def trainFileEmbeddings(fileIndexMapFilePath, wordIndexMapFilePath, wordEmbeddingsFilePath, contextsPath,
                         fileEmbeddingsPath, fileEmbeddingSize, epochs, superBatchSize, miniBatchSize, learningRate):
-    fileVocabulary = parameters.loadFileVocabulary(fileVocabularyPath)
+    fileVocabulary = parameters.loadIndexMap(fileIndexMapFilePath)
     fileVocabularySize = len(fileVocabulary)
 
-    wordVocabulary = parameters.loadWordVocabulary(wordVocabularyPath)
+    wordVocabulary = parameters.loadIndexMap(wordIndexMapFilePath)
     wordVocabularySize = len(wordVocabulary)
 
-    wordEmbeddings = parameters.loadEmbeddigns(wordEmbeddingsFilePath)
+    wordEmbeddings = parameters.loadEmbeddings(wordEmbeddingsFilePath)
 
     contextProvider = parameters.IndexContextProvider(contextsPath)
     contextsCount, contextSize = contextProvider.contextsCount, contextProvider.contextSize
@@ -75,15 +74,13 @@ def trainFileEmbeddings(fileVocabularyPath, wordVocabularyPath, wordEmbeddingsFi
         for superBatchIndex in xrange(0, superBatchesCount):
             contextSuperBatch = contextProvider[superBatchIndex * superBatchSize:(superBatchIndex + 1) * superBatchSize]
 
-            fileIndices, wordIndices = contextSuperBatch[:,0], contextSuperBatch[:,1:]
+            fileIndices, wordIndices, targetWordIndicis = contextSuperBatch[:,0], contextSuperBatch[:,1:-1], contextSuperBatch[:,:-1]
 
-            model.train(fileIndices, wordIndices, miniBatchSize, learningRate)
+            model.train(fileIndices, wordIndices, targetWordIndicis, miniBatchSize, learningRate)
 
             log.progress('Training model: {0:.3f}%.',
                          epoch * superBatchesCount + superBatchIndex + 1,
                          epochs * superBatchesCount)
-
-            time.sleep(0.01)
 
     log.lineBreak()
 
@@ -96,20 +93,13 @@ def trainFileEmbeddings(fileVocabularyPath, wordVocabularyPath, wordEmbeddingsFi
 
 
 if __name__ == '__main__':
-    fileVocabularyPath = '../data/Drosophila/Parameters/file_vocabulary.bin'
-    wordVocabularyPath = '../data/Drosophila/Parameters/word_vocabulary.bin'
-    wordEmbeddingsFilePath = '../data/Drosophila/Parameters/word_embeddings.bin'
-    contextsPath = '../data/Drosophila/Processed/contexts.bin'
-    fileEmbeddingsPath = '../data/Drosophila/Parameters/file_embeddings.bin'
-    fileEmbeddingSize = 200
-
     trainFileEmbeddings(
-        fileVocabularyPath,
-        wordVocabularyPath,
-        wordEmbeddingsFilePath,
-        contextsPath,
-        fileEmbeddingsPath,
-        fileEmbeddingSize,
+        fileIndexMapFilePath= '../data/Drosophila/Parameters/file_index_map.bin',
+        wordIndexMapFilePath= '../data/Drosophila/Parameters/word_index_map.bin',
+        wordEmbeddingsFilePath = '../data/Drosophila/Parameters/word_embeddings.bin',
+        contextsPath = '../data/Drosophila/Processed/contexts.bin',
+        fileEmbeddingsPath = '../data/Drosophila/Parameters/file_embeddings.bin',
+        fileEmbeddingSize = 100,
         epochs = 100,
         superBatchSize = 1000,
         miniBatchSize = 50,

@@ -1,10 +1,11 @@
 import os
 import shutil
-import log
 import glob
 import time
 import re
 import gzip
+
+import log
 
 
 def filterPage(page):
@@ -100,19 +101,20 @@ def unpackDump(dumpPath, cleanText):
     return dumpName, pages
 
 
-def prepareWikipediaDumps(inputDirectoryPath, outputDirectoryPath=None, outputFilePath=None, cleanText=True):
-    if outputDirectoryPath is not None:
-        if os.path.exists(outputDirectoryPath):
-            shutil.rmtree(outputDirectoryPath, ignore_errors=True)
-        os.mkdir(outputDirectoryPath)
-        os.chown(outputDirectoryPath, 1000, 1000)
-    elif outputFilePath is not None and os.path.exists(outputFilePath):
-        os.remove(outputFilePath)
+def prepareWikipediaDumps(inputDirectoryPath, outputDirectoryPath, outputConcatFilePath, cleanText=True):
+    if os.path.exists(outputDirectoryPath):
+        shutil.rmtree(outputDirectoryPath, ignore_errors=True)
+    os.mkdir(outputDirectoryPath)
+    os.chown(outputDirectoryPath, 1000, 1000)
+
+    if os.path.exists(outputConcatFilePath):
+        os.remove(outputConcatFilePath)
 
     pathName = inputDirectoryPath + '/*wiki*.txt.gz'
     dumpPaths = glob.glob(pathName)
     dumpsCount = len(dumpPaths)
     pagesCount = 0
+
     log.info('Found {0} Wikipedia dumps.', dumpsCount)
 
     startTime = time.time()
@@ -121,20 +123,24 @@ def prepareWikipediaDumps(inputDirectoryPath, outputDirectoryPath=None, outputFi
         dumpName, pages = unpackDump(dumpPath, cleanText)
 
         if any(pages):
-            if outputDirectoryPath is not None:
-                pageDirectoryPath = os.path.join(outputDirectoryPath, dumpName)
-                os.mkdir(pageDirectoryPath)
-                os.chown(pageDirectoryPath, 1000, 1000)
+            pageDirectoryPath = os.path.join(outputDirectoryPath, dumpName)
+            os.mkdir(pageDirectoryPath)
+            os.chown(pageDirectoryPath, 1000, 1000)
 
             for pageName, pageText in pages:
-                if outputDirectoryPath is not None:
-                    outputFilePath = os.path.join(pageDirectoryPath, pageName + '.txt')
+                outputFilePath = os.path.join(pageDirectoryPath, pageName + '.txt')
 
-                with open(outputFilePath, 'a+') as outputFile:
-                    if outputFile.tell():
-                        outputFile.write(' ')
+                with open(outputFilePath, 'w+') as outputConcatFile:
+                    if outputConcatFile.tell():
+                        outputConcatFile.write(' ')
 
-                    outputFile.write(pageText)
+                    outputConcatFile.write(pageText)
+
+                with open(outputConcatFilePath, 'a+') as outputConcatFile:
+                    if outputConcatFile.tell():
+                        outputConcatFile.write(' ')
+
+                    outputConcatFile.write(pageText)
 
                 pagesCount += 1
 
@@ -150,12 +156,9 @@ def prepareWikipediaDumps(inputDirectoryPath, outputDirectoryPath=None, outputFi
                          pagesCount)
 
     log.lineBreak()
-    log.info('Processing complete.')
 
 if __name__ == '__main__':
-    inputDirectoryPath = '../data/Drosophila/Raw'
-    outputDirectoryPath = '../data/Drosophila/Prepared'
-    outputFilePath = '../data/Drosophila/Concatenated/drosophila.txt'
-
-    #prepareWikipediaDumps(inputDirectoryPath, outputDirectoryPath=outputDirectoryPath)
-    prepareWikipediaDumps(inputDirectoryPath, outputFilePath=outputFilePath)
+    prepareWikipediaDumps(
+        inputDirectoryPath = '../data/Drosophila/Raw',
+        outputDirectoryPath = '../data/Drosophila/Prepared',
+        outputConcatFilePath = '../data/Drosophila/Concatenated/drosophila.txt')

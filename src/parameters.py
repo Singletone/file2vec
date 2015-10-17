@@ -1,9 +1,9 @@
 import os
 import io
-import log
 import struct
-import collections
 import numpy
+
+import log
 
 
 class IndexContextProvider():
@@ -60,223 +60,97 @@ class IndexContextProvider():
         return contexts
 
 
-class EmbeddingsProvider():
-    def __init__(self, embeddingsFilePath):
-        self.embeddingsFilePath = embeddingsFilePath
+def dumpIndexMap(indexMap, indexMapFilePath):
+    if os.path.exists(indexMapFilePath):
+        os.remove(indexMapFilePath)
 
-    def getEmbedding(self):
-        with open(self.embeddingsFilePath, 'r') as embeddingsFile:
-            embedding = embeddingsFile.readall()
-            return embedding
+    with open(indexMapFilePath, 'w') as indexMapFile:
+        indexMapSize = len(indexMap)
+        itemIndex = 0
 
+        indexMapFile.write(struct.pack('i', indexMapSize))
 
-def dumpFileVocabulary(vocabulary, vocabularyFilePath):
-    if os.path.exists(vocabularyFilePath):
-        os.remove(vocabularyFilePath)
-
-    itemsCount = len(vocabulary)
-    itemIndex = 0
-
-    with open(vocabularyFilePath, 'w') as file:
-        file.write(struct.pack('i', itemsCount))
-
-        for key, index in vocabulary.items():
-            keyLength = len(key)
-            keyLength = struct.pack('i', keyLength)
+        for key, index in indexMap.items():
+            keyLength = struct.pack('i', len(key))
             index = struct.pack('i', index)
 
-            file.write(keyLength)
-            file.write(key)
-            file.write(index)
+            indexMapFile.write(keyLength)
+            indexMapFile.write(key)
+            indexMapFile.write(index)
 
             itemIndex += 1
-            log.progress('Dumping file vocabulary: {0:.3f}%.', itemIndex, itemsCount)
+            log.progress('Dumping index map: {0:.3f}%.', itemIndex, indexMapSize)
 
-        file.flush()
+        indexMapFile.flush()
 
         log.lineBreak()
 
 
-def loadFileVocabulary(vocabularyFilePath):
-    vocabulary = collections.OrderedDict()
+def loadIndexMap(indexMapFilePath, inverse=False):
+    vocabulary = {}
 
-    with open(vocabularyFilePath, 'rb') as file:
-        itemsCount = file.read(4)
+    with open(indexMapFilePath, 'rb') as indexMapFile:
+        itemsCount = indexMapFile.read(4)
         itemsCount = struct.unpack('i', itemsCount)[0]
 
         for itemIndex in range(0, itemsCount):
-            wordLength = file.read(4)
+            wordLength = indexMapFile.read(4)
             wordLength = struct.unpack('i', wordLength)[0]
 
-            word = file.read(wordLength)
+            word = indexMapFile.read(wordLength)
 
-            index = file.read(4)
+            index = indexMapFile.read(4)
             index = struct.unpack('i', index)[0]
 
-            vocabulary[word] = index
+            if inverse:
+                vocabulary[index] = word
+            else:
+                vocabulary[word] = index
 
-            log.progress('Loading file vocabulary: {0:.3f}%.', itemIndex + 1, itemsCount)
+            log.progress('Loading index map: {0:.3f}%.', itemIndex + 1, itemsCount)
 
         log.lineBreak()
 
     return vocabulary
-
-
-def loadIndexFileMap(vocabularyFilePath):
-    with open(vocabularyFilePath, 'rb') as file:
-        itemsCount = file.read(4)
-        itemsCount = struct.unpack('i', itemsCount)[0]
-
-        indexFileMap = [None] * itemsCount
-
-        for itemIndex in range(0, itemsCount):
-            wordLength = file.read(4)
-            wordLength = struct.unpack('i', wordLength)[0]
-
-            word = file.read(wordLength)
-
-            index = file.read(4)
-            index = struct.unpack('i', index)[0]
-
-            indexFileMap[index] = word
-
-            log.progress('Loading index-file map: {0:.3f}%.', itemIndex + 1, itemsCount)
-
-        log.lineBreak()
-
-        return indexFileMap
-
-
-def getFileVocabularySize(fileVocabularyPath):
-    with open(fileVocabularyPath, 'rb') as file:
-        itemsCount = file.read(4)
-        itemsCount = struct.unpack('i', itemsCount)[0]
-
-        return itemsCount
-
-
-def dumpWordVocabulary(vocabulary, vocabularyFilePath):
-    if os.path.exists(vocabularyFilePath):
-        os.remove(vocabularyFilePath)
-
-    itemsCount = len(vocabulary)
-    itemIndex = 0
-
-    with open(vocabularyFilePath, 'w') as file:
-        file.write(struct.pack('i', itemsCount))
-
-        for key, value in vocabulary.items():
-            keyLength = len(key)
-            keyLength = struct.pack('i', keyLength)
-            index = struct.pack('i', value)
-
-            file.write(keyLength)
-            file.write(key)
-            file.write(index)
-
-            itemIndex += 1
-            log.progress('Dumping word vocabulary: {0:.3f}%.', itemIndex, itemsCount)
-
-        file.flush()
-
-        log.lineBreak()
-
-
-def loadWordVocabulary(vocabularyFilePath):
-    vocabulary = collections.OrderedDict()
-
-    with open(vocabularyFilePath, 'rb') as file:
-        itemsCount = file.read(4)
-        itemsCount = struct.unpack('i', itemsCount)[0]
-
-        for itemIndex in range(0, itemsCount):
-            wordLength = file.read(4)
-            wordLength = struct.unpack('i', wordLength)[0]
-
-            word = file.read(wordLength)
-
-            index = file.read(4)
-            index = struct.unpack('i', index)[0]
-
-            vocabulary[word] = index
-
-            log.progress('Loading word vocabulary: {0:.3f}%.', itemIndex + 1, itemsCount)
-
-        log.lineBreak()
-
-    return vocabulary
-
-
-def loadIndexWordMap(vocabularyFilePath):
-    with open(vocabularyFilePath, 'rb') as file:
-        itemsCount = file.read(4)
-        itemsCount = struct.unpack('i', itemsCount)[0]
-
-        indexWordMap = [None] * itemsCount
-
-        for itemIndex in range(0, itemsCount):
-            wordLength = file.read(4)
-            wordLength = struct.unpack('i', wordLength)[0]
-
-            word = file.read(wordLength)
-
-            index = file.read(4)
-            index = struct.unpack('i', index)[0]
-
-            indexWordMap[index] = word
-
-            log.progress('Loading index-word map: {0:.3f}%.', itemIndex + 1, itemsCount)
-
-        log.lineBreak()
-
-        return indexWordMap
-
-
-def getWordVocabularySize(wordVocabularyPath):
-    with open(wordVocabularyPath, 'rb') as file:
-        itemsCount = file.read(4)
-        itemsCount = struct.unpack('i', itemsCount)[0]
-
-        return itemsCount
 
 
 def dumpEmbeddings(embeddings, embeddingsFilePath):
     if os.path.exists(embeddingsFilePath):
         os.remove(embeddingsFilePath)
 
-    wordsCount, embeddingSize = embeddings.shape
+    embeddingsCount, embeddingSize = embeddings.shape
 
-    with open(embeddingsFilePath, 'w') as file:
-        file.write(struct.pack('<i', wordsCount))
-        file.write(struct.pack('<i', embeddingSize))
-
-        format = '{0}f'.format(embeddingSize)
-        for wordIndex in range(0, wordsCount):
-            wordEmbedding = embeddings[wordIndex]
-            wordEmbedding = struct.pack(format, *wordEmbedding)
-
-            file.write(wordEmbedding)
-
-
-def loadEmbeddigns(embeddingsFilePath):
-    with open(embeddingsFilePath, 'rb') as file:
-        wordsCount = file.read(4)
-        wordsCount = struct.unpack('<i', wordsCount)[0]
-
-        embeddingSize = file.read(4)
-        embeddingSize = struct.unpack('<i', embeddingSize)[0]
-
-        embeddings = numpy.empty((wordsCount, embeddingSize))
+    with open(embeddingsFilePath, 'w') as embeddingsFile:
+        embeddingsFile.write(struct.pack('i', embeddingsCount))
+        embeddingsFile.write(struct.pack('i', embeddingSize))
 
         format = '{0}f'.format(embeddingSize)
-        for wordIndex in range(0, wordsCount):
-            wordEmbedding = file.read(embeddingSize * 4)
-            wordEmbedding = struct.unpack(format, wordEmbedding)[0]
+        for wordIndex in range(0, embeddingsCount):
+            embedding = embeddings[wordIndex]
+            embedding = struct.pack(format, *embedding)
+
+            embeddingsFile.write(embedding)
+
+
+def loadEmbeddings(embeddingsFilePath):
+    with open(embeddingsFilePath, 'rb') as embeddingsFile:
+        embeddingsCount = embeddingsFile.read(4)
+        embeddingsCount = struct.unpack('i', embeddingsCount)[0]
+
+        embeddingSize = embeddingsFile.read(4)
+        embeddingSize = struct.unpack('i', embeddingSize)[0]
+
+        embeddings = numpy.empty((embeddingsCount, embeddingSize))
+
+        format = '{0}f'.format(embeddingSize)
+        for wordIndex in range(0, embeddingsCount):
+            embedding = embeddingsFile.read(embeddingSize * 4)
+            embedding = struct.unpack(format, embedding)[0]
 
         return embeddings
 
 
-def loadW2VParameters(filePath, loadEmbeddings=False):
+def loadW2VParameters(filePath, loadEmbeddings=True):
     with open(filePath, 'rb') as file:
         firstLine = file.readline()
         embeddingsCount, embeddingSize = tuple(firstLine.split(' '))
@@ -285,7 +159,7 @@ def loadW2VParameters(filePath, loadEmbeddings=False):
         wordIndexMap = {}
         embeddings = []
 
-        log.info('Vocabulary size: {0}. Embedding size: {1}.', embeddingsCount, embeddingSize)
+        log.info('Words count: {0}. Embedding size: {1}.', embeddingsCount, embeddingSize)
 
         embeddingIndex = 0
         while True:
@@ -295,6 +169,7 @@ def loadW2VParameters(filePath, loadEmbeddings=False):
 
                 if not char:
                     log.lineBreak()
+
                     if loadEmbeddings:
                         return wordIndexMap, numpy.asarray(embeddings)
                     else:
@@ -315,7 +190,7 @@ def loadW2VParameters(filePath, loadEmbeddings=False):
 
 
             embeddingIndex += 1
-            log.progress('Reading embeddings: {0:.3f}%.', embeddingIndex, embeddingsCount)
+            log.progress('Reading W2V embeddings: {0:.3f}%.', embeddingIndex, embeddingsCount)
 
 
 def pruneW2VEmbeddings(wordEmbeddingsMapPath, wordVocabularyPath, wordEmbeddingsPath, mask={}):
@@ -372,7 +247,7 @@ def pruneW2VEmbeddings(wordEmbeddingsMapPath, wordVocabularyPath, wordEmbeddings
                          embeddingsCount,
                          wordIndex - wordsCount,
                          embeddingsCount,
-                         (wordIndex - wordsCount) * 100 / embeddingsCount)
+                         (wordIndex - wordsCount) * 100.0 / embeddingsCount)
     finally:
         wordVocabularyFile.seek(0, io.SEEK_SET)
         wordEmbeddingsFile.seek(0, io.SEEK_SET)
