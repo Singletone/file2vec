@@ -125,11 +125,13 @@ def dumpEmbeddings(embeddings, embeddingsFilePath):
         embeddingsFile.write(struct.pack('i', embeddingSize))
 
         format = '{0}f'.format(embeddingSize)
-        for wordIndex in range(0, embeddingsCount):
-            embedding = embeddings[wordIndex]
+        for embeddingIndex in range(0, embeddingsCount):
+            embedding = embeddings[embeddingIndex]
             embedding = struct.pack(format, *embedding)
 
             embeddingsFile.write(embedding)
+
+            log.progress('Dumping embeddings: {0:.3f}%.', embeddingIndex + 1, embeddingsCount)
 
 
 def loadEmbeddings(embeddingsFilePath):
@@ -143,9 +145,13 @@ def loadEmbeddings(embeddingsFilePath):
         embeddings = numpy.empty((embeddingsCount, embeddingSize))
 
         format = '{0}f'.format(embeddingSize)
-        for wordIndex in range(0, embeddingsCount):
+        for embeddingIndex in range(0, embeddingsCount):
             embedding = embeddingsFile.read(embeddingSize * 4)
-            embedding = struct.unpack(format, embedding)[0]
+            embedding = struct.unpack(format, embedding)
+
+            embeddings[embeddingIndex] = embedding
+
+            log.progress('Loading embeddings: {0:.3f}%.', embeddingIndex + 1, embeddingsCount)
 
         return embeddings
 
@@ -188,9 +194,8 @@ def loadW2VParameters(filePath, loadEmbeddings=True):
             else:
                 file.seek(embeddingSize * 4, io.SEEK_CUR)
 
-
             embeddingIndex += 1
-            log.progress('Reading W2V embeddings: {0:.3f}%.', embeddingIndex, embeddingsCount)
+            log.progress('Loading W2V embeddings: {0:.3f}%.', embeddingIndex, embeddingsCount)
 
 
 def pruneW2VEmbeddings(wordEmbeddingsMapPath, wordVocabularyPath, wordEmbeddingsPath, mask={}):

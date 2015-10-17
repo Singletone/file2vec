@@ -353,6 +353,7 @@ def compareHistories(metricName, *metricsHistoryPaths):
 
 def plotEmbeddings(indexMap, embeddings):
     embeddingsCount, embeddingSize = embeddings.shape
+    embeddings = numpy.asarray(embeddings, 'float64')
     lowDimEmbeddings = tsne.tsne(embeddings, 2, embeddingSize, 20.0, 1000)
 
     filePaths = indexMap.keys()
@@ -370,7 +371,7 @@ def plotEmbeddings(indexMap, embeddings):
     axis.scatter(lowDimEmbeddingsX, lowDimEmbeddingsY, 20, labels)
 
     for index, fileName in enumerate(fileNames):
-        axis.annotate(fileName, (lowDimEmbeddingsX[index] + 5,lowDimEmbeddingsY[index] + 5))
+        axis.annotate(fileName, (lowDimEmbeddingsX[index],lowDimEmbeddingsY[index]))
 
     plt.grid()
     plt.show()
