@@ -1,15 +1,17 @@
-import log
-import kit
 import scipy.stats
 import numpy
-import pandas
 import re
-import vectors
 import os
 import random
 from matplotlib import colors
 from matplotlib import pyplot as plt
 
+import pandas
+
+import log
+import kit
+import vectors
+from libs import tsne
 
 rubensteinGoodenoughData = None
 def rubensteinGoodenough(wordIndexMap, embeddings):
@@ -346,6 +348,31 @@ def compareHistories(metricName, *metricsHistoryPaths):
     plt.title(metricName)
     plt.legend(metricScatters, metricsHistoryNames, scatterpoints=1, loc='lower right', ncol=3, fontsize=8)
 
+    plt.show()
+
+
+def plotEmbeddings(indexMap, embeddings):
+    embeddingsCount, embeddingSize = embeddings.shape
+    lowDimEmbeddings = tsne.tsne(embeddings, 2, embeddingSize, 20.0, 1000)
+
+    filePaths = indexMap.keys()
+    fileNames = [os.path.basename(filePath).split('.')[0] for filePath in filePaths]
+
+    labels = set(fileNames)
+    labels = zip(labels, numpy.arange(0, len(labels)))
+    labels = [(label, index) for label, index in labels]
+    labels = dict(labels)
+    labels = [labels[fileName] for fileName in fileNames]
+
+    lowDimEmbeddingsX, lowDimEmbeddingsY = lowDimEmbeddings[:,0], lowDimEmbeddings[:,1]
+
+    figure, axis = plt.subplots()
+    axis.scatter(lowDimEmbeddingsX, lowDimEmbeddingsY, 20, labels)
+
+    for index, fileName in enumerate(fileNames):
+        axis.annotate(fileName, (lowDimEmbeddingsX[index] + 5,lowDimEmbeddingsY[index] + 5))
+
+    plt.grid()
     plt.show()
 
 

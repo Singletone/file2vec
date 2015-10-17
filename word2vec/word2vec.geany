@@ -22,4 +22,5 @@ long_line_behaviour=1
 long_line_column=72
 
 [files]
-current_page=-1
+current_page=0
+FILE_NAME_0=12463;C;0;EUTF-8;1;1;0;%2Fhome%2Fbest%2FProjects%2Ffile2vec%2Fword2vec%2Fword2vec.c;0;4
