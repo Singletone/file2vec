@@ -52,6 +52,7 @@ def cleanPage(page):
     pageText = re.sub('\s(\.{3})\s', '.', pageText)
     pageText = re.sub('\s(\.{2})\s', ' ', pageText)
     pageText = re.sub('<[^>]+>', '', pageText)
+    pageText = re.sub('([0-9\-]+)s', ' NUMBER ', pageText)
     pageText = re.sub('[^a-z]+([0-9\-]+)[^a-z]+', ' NUMBER ', pageText)
     pageText = re.sub('\s([^a-zA-Z0-9\.\-\s]+)\s', ' SYMBOL ', pageText)
     pageText = re.sub('\s([bcdefghjklmnopqrstuvwxyz])\s', ' SYMBOL ', pageText)
@@ -61,7 +62,7 @@ def cleanPage(page):
     sentences = [sentence for sentence in sentences
                  if len(sentence.split(' ')) > 5 and sentence.count('NUMBER') < 3]
 
-    pageText = '. '.join(sentences)
+    pageText = '. '.join(sentences) + '.'
 
     return pageName, pageText
 
@@ -156,5 +157,5 @@ if __name__ == '__main__':
     outputDirectoryPath = '../data/Drosophila/Prepared'
     outputFilePath = '../data/Drosophila/Concatenated/drosophila.txt'
 
-    # prepareWikipediaDumps(inputDirectoryPath, outputDirectoryPath=outputDirectoryPath)
+    #prepareWikipediaDumps(inputDirectoryPath, outputDirectoryPath=outputDirectoryPath)
     prepareWikipediaDumps(inputDirectoryPath, outputFilePath=outputFilePath)

@@ -53,7 +53,7 @@ class WordContextProvider:
                     yield window
 
 
-def processData(inputDirectoryPath, wordVocabularyPath, fileVocabularyPath, contextsPath, contextSize):
+def processData(inputDirectoryPath, wordEmbeddingsMapPath, fileVocabularyPath, wordVocabularyPath, wordEmbeddingsPath, contextsPath, contextSize):
     if os.path.exists(contextsPath):
         os.remove(contextsPath)
 
@@ -61,7 +61,8 @@ def processData(inputDirectoryPath, wordVocabularyPath, fileVocabularyPath, cont
     wordContextSize = contextSize - fileContextSize
 
     fileVocabulary = collections.OrderedDict()
-    wordVocabulary = parameters.loadWordVocabulary(wordVocabularyPath)
+    wordIndexMap = collections.OrderedDict()
+    w2vWordIndexMap = parameters.loadW2VParameters(wordEmbeddingsMapPath, loadEmbeddings=False)
 
     if os.path.exists(contextsPath):
         os.remove(contextsPath)
@@ -84,12 +85,16 @@ def processData(inputDirectoryPath, wordVocabularyPath, fileVocabularyPath, cont
 
             contextProvider = WordContextProvider(textFilePath)
             for wordContext in contextProvider.next(wordContextSize):
-                allWordsInWordVocabulary = [word in wordVocabulary for word in wordContext]
+                allWordsInWordVocabulary = [word in w2vWordIndexMap for word in wordContext]
 
                 if not all(allWordsInWordVocabulary):
                     continue
 
-                indexContext = [textFileIndex] + map(lambda w: wordVocabulary[w], wordContext)
+                for word in wordContext:
+                    if word not in wordIndexMap:
+                        wordIndexMap[word] = len(wordIndexMap)
+
+                indexContext = [textFileIndex] + map(lambda w: w2vWordIndexMap[w], wordContext)
 
                 contextsFile.write(struct.pack(contextFormat, *indexContext))
                 contextsCount += 1
@@ -99,11 +104,12 @@ def processData(inputDirectoryPath, wordVocabularyPath, fileVocabularyPath, cont
             elapsed = currentTime - startTime
             secondsPerFile = elapsed / (textFileIndex + 1)
 
-            log.progress('Reading contexts: {0:.3f}%. Elapsed: {1} ({2:.3f} sec/file). Contexts: {3}.',
+            log.progress('Reading contexts: {0:.3f}%. Elapsed: {1} ({2:.3f} sec/file). Words: {3}. Contexts: {4}.',
                          textFileIndex + 1,
                          textFileCount,
                          log.delta(elapsed),
                          secondsPerFile,
+                         len(wordIndexMap),
                          contextsCount)
 
         log.lineBreak()
@@ -113,13 +119,16 @@ def processData(inputDirectoryPath, wordVocabularyPath, fileVocabularyPath, cont
         contextsFile.flush()
 
     parameters.dumpFileVocabulary(fileVocabulary, fileVocabularyPath)
+    parameters.pruneW2VEmbeddings(wordEmbeddingsMapPath, wordVocabularyPath, wordEmbeddingsPath, mask=wordIndexMap)
 
 
 if __name__ == '__main__':
     inputDirectoryPath = '../data/Drosophila/Prepared'
-    wordVocabularyPath = '../data/Drosophila/Parameters/word_vocabulary.bin'
+    wordEmbeddingsMapPath = '../data/Drosophila/Processed/drosophila_w2v.bin'
     fileVocabularyPath = '../data/Drosophila/Parameters/file_vocabulary.bin'
+    wordVocabularyPath = '../data/Drosophila/Parameters/word_vocabulary.bin'
+    wordEmbeddingsPath = '../data/Drosophila/Parameters/word_embeddings.bin'
     contextsPath = '../data/Drosophila/Processed/contexts.bin'
     contextSize = 7
 
-    processData(inputDirectoryPath, wordVocabularyPath, fileVocabularyPath, contextsPath, contextSize)
+    processData(inputDirectoryPath, wordEmbeddingsMapPath, fileVocabularyPath, wordVocabularyPath, wordEmbeddingsPath, contextsPath, contextSize)

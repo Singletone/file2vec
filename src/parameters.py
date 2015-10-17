@@ -284,3 +284,112 @@ def loadEmbeddigns(embeddingsFilePath):
             wordEmbedding = struct.unpack(format, wordEmbedding)[0]
 
         return embeddings
+
+
+def loadW2VParameters(filePath, loadEmbeddings=False):
+    with open(filePath, 'rb') as file:
+        firstLine = file.readline()
+        embeddingsCount, embeddingSize = tuple(firstLine.split(' '))
+        embeddingsCount, embeddingSize = int(embeddingsCount), int(embeddingSize)
+        embeddingFormat = '{0}f'.format(embeddingSize)
+        wordIndexMap = {}
+        embeddings = []
+
+        log.info('Vocabulary size: {0}. Embedding size: {1}.', embeddingsCount, embeddingSize)
+
+        embeddingIndex = 0
+        while True:
+            word = ''
+            while True:
+                char = file.read(1)
+
+                if not char:
+                    log.lineBreak()
+                    if loadEmbeddings:
+                        return wordIndexMap, numpy.asarray(embeddings)
+                    else:
+                        return wordIndexMap
+
+                if char == ' ':
+                    word = word.strip()
+                    break
+
+                word += char
+
+            wordIndexMap[word] = len(wordIndexMap)
+            if loadEmbeddings:
+                embedding = struct.unpack(embeddingFormat, file.read(embeddingSize * 4))
+                embeddings.append(embedding)
+            else:
+                file.seek(embeddingSize * 4, io.SEEK_CUR)
+
+
+            embeddingIndex += 1
+            log.progress('Reading embeddings: {0:.3f}%.', embeddingIndex, embeddingsCount)
+
+
+def pruneW2VEmbeddings(wordEmbeddingsMapPath, wordVocabularyPath, wordEmbeddingsPath, mask={}):
+    wordEmbeddingsMapFile = open(wordEmbeddingsMapPath, 'r')
+    wordVocabularyFile = open(wordVocabularyPath, 'w+')
+    wordEmbeddingsFile = open(wordEmbeddingsPath, 'w+')
+
+    wordsCount = 0
+
+    try:
+        firstLine = wordEmbeddingsMapFile.readline()
+        embeddingsCount, embeddingSize = tuple(firstLine.split(' '))
+        embeddingsCount, embeddingSize = int(embeddingsCount), int(embeddingSize)
+        embeddingFormat = '{0}f'.format(embeddingSize)
+
+        wordVocabularyFile.write(struct.pack('i', 0)) # placeholder to be filled later
+        wordEmbeddingsFile.write(struct.pack('i', 0)) # placeholder to be filled later
+        wordEmbeddingsFile.write(struct.pack('i', embeddingSize))
+
+        log.info('Vocabulary size: {0}. Embedding size: {1}.', embeddingsCount, embeddingSize)
+        wordIndex = 0
+        while True:
+            word = ''
+            while True:
+                char = wordEmbeddingsMapFile.read(1)
+
+                if not char:
+                    log.lineBreak()
+                    return
+
+                if char == ' ':
+                    word = word.strip()
+                    break
+
+                word += char
+
+            if word in mask:
+                wordLength = len(word)
+
+                wordVocabularyFile.write(struct.pack('i', wordLength))
+                wordVocabularyFile.write(word)
+                wordVocabularyFile.write(struct.pack('i', wordsCount))
+
+                embedding = wordEmbeddingsMapFile.read(embeddingSize * 4)
+                wordEmbeddingsFile.write(embedding)
+
+                wordsCount += 1
+            else:
+                wordEmbeddingsMapFile.seek(embeddingSize * 4, io.SEEK_CUR)
+
+            wordIndex += 1
+            log.progress('Pruning W2V embeddings: {0:.3f}%. Pruned {1} words out of {2} ({3:.3f}%).',
+                         wordIndex,
+                         embeddingsCount,
+                         wordIndex - wordsCount,
+                         embeddingsCount,
+                         (wordIndex - wordsCount) * 100 / embeddingsCount)
+    finally:
+        wordVocabularyFile.seek(0, io.SEEK_SET)
+        wordEmbeddingsFile.seek(0, io.SEEK_SET)
+
+        wordVocabularyFile.write(struct.pack('i', wordsCount))
+        wordEmbeddingsFile.write(struct.pack('i', wordsCount))
+
+        wordEmbeddingsMapFile.close()
+        wordVocabularyFile.close()
+        wordEmbeddingsFile.close()
