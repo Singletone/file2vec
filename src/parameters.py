@@ -109,7 +109,7 @@ def loadIndexMap(indexMapFilePath, inverse=False):
 
             log.progress('Loading index map: {0:.3f}%.', itemIndex + 1, itemsCount)
 
-        log.lineBreak()
+        log.info('Loading index map complete. {0} items loaded.', itemsCount)
 
     return vocabulary
 
@@ -152,6 +152,8 @@ def loadEmbeddings(embeddingsFilePath):
             embeddings[embeddingIndex] = embedding
 
             log.progress('Loading embeddings: {0:.3f}%.', embeddingIndex + 1, embeddingsCount)
+
+        log.info('Loading embeddings complete. {0} embeddings loaded.', embeddingsCount)
 
         return embeddings
 
