@@ -60,7 +60,8 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
 
     fileIndexMap = {}
     wordIndexMap = {}
-    w2vWordIndexMap = parameters.loadW2VParameters(w2vEmbeddingsFilePath, loadEmbeddings=False)
+    wordEmbeddings = []
+    w2vWordIndexMap, w2vEmbeddings = parameters.loadW2VParameters(w2vEmbeddingsFilePath)
 
     if os.path.exists(contextsPath):
         os.remove(contextsPath)
@@ -91,8 +92,11 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
                 for word in wordContext:
                     if word not in wordIndexMap:
                         wordIndexMap[word] = len(wordIndexMap)
+                        wordEmbeddingIndex = w2vWordIndexMap[word]
+                        wordEmbedding = w2vEmbeddings[wordEmbeddingIndex]
+                        wordEmbeddings.append(wordEmbedding)
 
-                indexContext = [textFileIndex] + map(lambda w: w2vWordIndexMap[w], wordContext)
+                indexContext = [textFileIndex] + map(lambda w: wordIndexMap[w], wordContext)
 
                 contextsFile.write(struct.pack(contextFormat, *indexContext))
                 contextsCount += 1
@@ -117,13 +121,14 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
         contextsFile.flush()
 
     parameters.dumpIndexMap(fileIndexMap, fileIndexMapFilePath)
-    parameters.pruneW2VEmbeddings(w2vEmbeddingsFilePath, wordIndexMapFilePath, wordEmbeddingsFilePath, mask=wordIndexMap)
+    parameters.dumpIndexMap(wordIndexMap, wordIndexMapFilePath)
+    parameters.dumpEmbeddings(wordEmbeddings, wordEmbeddingsFilePath)
 
 
 if __name__ == '__main__':
     processData(
         inputDirectoryPath = '../data/Drosophila/Prepared',
-        w2vEmbeddingsFilePath = '../data/Drosophila/Processed/drph_s200_w7_s0_n5.bin',
+        w2vEmbeddingsFilePath = '../data/Drosophila/Processed/wiki_full_s100_w7_n7.bin',
         fileIndexMapFilePath = '../data/Drosophila/Parameters/file_index_map.bin',
         wordIndexMapFilePath = '../data/Drosophila/Parameters/word_index_map.bin',
         wordEmbeddingsFilePath = '../data/Drosophila/Parameters/word_embeddings.bin',

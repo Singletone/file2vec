@@ -43,6 +43,7 @@ def cleanPage(page):
         if heading.lower() not in restrictedHeaders:
             pageText += paragraph.lower()
 
+    pageText = re.sub('\s+', ' ', pageText)
     pageText = re.sub('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', 'URL', pageText)
     pageText = re.sub('\([^\)]+\)', '', pageText)
     pageText = re.sub('(:[^\.]\.)', '', pageText)
@@ -54,6 +55,7 @@ def cleanPage(page):
     pageText = re.sub('\s(\.{2})\s', ' ', pageText)
     pageText = re.sub('<[^>]+>', '', pageText)
     pageText = re.sub('([0-9\-]+)s', ' NUMBER ', pageText)
+    pageText = re.sub('([0-9\-]+)th', ' NUMBER ', pageText)
     pageText = re.sub('[^a-z]+([0-9\-]+)[^a-z]+', ' NUMBER ', pageText)
     pageText = re.sub('\s([^a-zA-Z0-9\.\-\s]+)\s', ' SYMBOL ', pageText)
     pageText = re.sub('\s([bcdefghjklmnopqrstuvwxyz])\s', ' SYMBOL ', pageText)

@@ -130,8 +130,8 @@ if __name__ == '__main__':
         wordEmbeddingsFilePath = '../data/Drosophila/Parameters/word_embeddings.bin',
         contextsPath = '../data/Drosophila/Processed/contexts.bin',
         fileEmbeddingsPath = '../data/Drosophila/Parameters/file_embeddings.bin',
-        fileEmbeddingSize = 200,
-        epochs = 1,
+        fileEmbeddingSize = 100,
+        epochs = 5,
         superBatchSize = 10000,
         miniBatchSize = 100,
-        learningRate = 0.001)
+        learningRate = 0.13)
