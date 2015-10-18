@@ -387,7 +387,7 @@ def compareEmbeddings(indexMap, embeddingsList):
     labels = dict(labels)
     labels = [labels[fileName] for fileName in fileNames]
 
-    figure, axises = plt.subplots(1, 2)
+    figure, axises = plt.subplots(1, len(embeddingsList))
     for embeddings, axis in zip(embeddingsList, axises):
         embeddingsCount, embeddingSize = embeddings.shape
         embeddings = numpy.asarray(embeddings, 'float64')

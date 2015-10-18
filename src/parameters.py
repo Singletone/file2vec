@@ -154,7 +154,7 @@ def loadEmbeddings(embeddingsFilePath):
 
             log.progress('Loading embeddings: {0:.3f}%.', embeddingIndex + 1, embeddingsCount)
 
-        log.info('Loading embeddings complete. {0} embeddings loaded.', embeddingsCount)
+        log.info('Loading embeddings complete. {0} embeddings loaded {1} features each.', embeddingsCount, embeddingSize)
 
         return embeddings
 
