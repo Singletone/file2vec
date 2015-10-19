@@ -133,4 +133,4 @@ if __name__ == '__main__':
         wordIndexMapFilePath = '../data/Drosophila/Parameters/word_index_map.bin',
         wordEmbeddingsFilePath = '../data/Drosophila/Parameters/word_embeddings.bin',
         contextsPath = '../data/Drosophila/Processed/contexts.bin',
-        windowSize = 7)
+        windowSize = 8)

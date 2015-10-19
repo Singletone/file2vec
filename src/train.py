@@ -4,6 +4,7 @@ import parameters
 import log
 import numpy as np
 import vectors
+import time
 from matplotlib import pyplot as plt
 
 
@@ -28,7 +29,7 @@ def train(fileIndexMap, wordIndexMap, wordEmbeddings, contexts):
     weights = theano.shared(rnd2(fileEmbeddingSize + contextSize * wordEmbeddingSize, wordsCount), 'weights', borrow=True)
     biases = theano.shared(rnd1(wordsCount), 'bias', borrow=True)
 
-    ctxs = T.imatrix('contexts')
+    ctxs = T.imatrix('ctxs')
     fileIndices = ctxs[:,0:1]
     wordIndices = ctxs[:,1:-1]
     targetIndices = T.reshape(ctxs[:,-1:], (ctxs.shape[0],))
@@ -41,7 +42,7 @@ def train(fileIndexMap, wordIndexMap, wordEmbeddings, contexts):
 
     probabilities = T.nnet.softmax(T.dot(features, weights) + biases)
 
-    parameters = [fileEmbeddings, weights, biases]
+    parameters = [weights, biases]
 
     l1Coefficient = T.scalar('l1Coefficient', dtype=floatX)
     l2Coefficient = T.scalar('l2Coefficient', dtype=floatX)
@@ -57,16 +58,33 @@ def train(fileIndexMap, wordIndexMap, wordEmbeddings, contexts):
     gradients = [T.grad(cost, wrt=p) for p in parameters]
     updates = [(p, p - learningRate * g) for p, g in zip(parameters, gradients)]
 
+    gradient = T.grad(cost=cost, wrt=files)
+    updates = [(fileEmbeddings, T.inc_subtensor(files, -learningRate * gradient))] + updates
+
+    batchIndex = T.iscalar('batchIndex')
+    batchSize = T.iscalar('batchSize')
+    trainingContexts = theano.shared(contexts, 'trainingContexts', borrow=True)
+
     trainModel = theano.function(
-        inputs=[ctxs, learningRate, l1Coefficient, l2Coefficient],
+        inputs=[batchIndex, batchSize, learningRate, l1Coefficient, l2Coefficient],
         outputs=cost,
-        updates=updates
+        updates=updates,
+        givens={
+            ctxs: trainingContexts[batchIndex * batchSize : (batchIndex + 1) * batchSize]
+        }
     )
 
-    errors = []
-    epochs = 1000
+    startTime = time.time()
+    errors, bb, gs, bg = [], [], [], []
+    epochs = 300
+    bs = 50 # bs for batchSize
     for epoch in xrange(0, epochs):
-        error = trainModel(contexts, 0.5, 0.006, 0.001)
+        contextsCount = contexts.shape[0]
+        batchesCount = contextsCount / bs + int(contextsCount % bs > 0)
+
+        for bi in xrange(0, batchesCount): # bi for batchIndex
+            error = trainModel(bi, bs, 0.4, 0.006, 0.001)
+
         errors.append(error)
 
         biochemistry = '../data/Drosophila/Prepared/drosophila/0_biochemistry.txt'
@@ -86,15 +104,30 @@ def train(fileIndexMap, wordIndexMap, wordEmbeddings, contexts):
         galaxyVector = fe[galaxyIndex]
         starVector = fe[starIndex]
 
-        log.progress('Training model: {0:.3f}%. Error: {1:.3f}. Biochemistry/Biology={2:.3f}. Galaxy/Star={3:.3f}. Biology/Galaxy={4:.3f}.',
+        elapsed = time.time() - startTime
+        secondsPerEpoch = elapsed / (epoch + 1)
+
+        bbi = vectors.euclideanDistance(biochemistryVector, biologyVector)
+        gsi = vectors.euclideanDistance(galaxyVector, starVector)
+        bgi = vectors.euclideanDistance(biologyVector, galaxyVector)
+
+        bb.append(bbi)
+        gs.append(gsi)
+        bg.append(bgi)
+
+        log.progress('Training model: {0:.3f}%. {1:.3f} sec per epoch. Error: {2:.3f}. Biochemistry/Biology={3:.3f}. Galaxy/Star={4:.3f}. Biology/Galaxy={5:.3f}.',
                      epoch + 1, epochs,
+                     secondsPerEpoch,
                      float(error),
-                     vectors.euclideanDistance(biochemistryVector, biologyVector),
-                     vectors.euclideanDistance(galaxyVector, starVector),
-                     vectors.euclideanDistance(biologyVector, galaxyVector))
+                     bbi,
+                     gsi,
+                     bgi)
 
     plt.grid()
-    plt.scatter(np.arange(0, epochs), errors)
+    # plt.scatter(np.arange(0, epochs), errors, c='r')
+    plt.scatter(np.arange(0, epochs), bb, c='b')
+    plt.scatter(np.arange(0, epochs), gs, c='b')
+    plt.scatter(np.arange(0, epochs), bg, c='g')
     plt.show()
 
 
