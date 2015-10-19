@@ -3,6 +3,7 @@ import theano.tensor as T
 import parameters
 import log
 import numpy as np
+import vectors
 from matplotlib import pyplot as plt
 
 
@@ -16,7 +17,7 @@ def train(fileIndexMap, wordIndexMap, wordEmbeddings, contexts):
     contextsCount = len(contexts)
 
     filesCount = len(fileIndexMap)
-    fileEmbeddingSize = 100
+    fileEmbeddingSize = 200
     wordsCount = len(wordIndexMap)
     wordEmbeddingSize = wordEmbeddings.shape[1]
     windowSize = contexts.shape[1] - 1
@@ -24,23 +25,23 @@ def train(fileIndexMap, wordIndexMap, wordEmbeddings, contexts):
 
     fileEmbeddings = theano.shared(rnd2(filesCount, fileEmbeddingSize), 'fileEmbeddings', borrow=True)
     wordEmbeddings = theano.shared(wordEmbeddings, 'wordEmbeddings', borrow=True)
-    weights = theano.shared(rnd2(contextSize * wordEmbeddingSize, wordsCount), 'weights', borrow=True)
+    weights = theano.shared(rnd2(fileEmbeddingSize + contextSize * wordEmbeddingSize, wordsCount), 'weights', borrow=True)
     biases = theano.shared(rnd1(wordsCount), 'bias', borrow=True)
 
-    fi = contexts[:,0:1]
-    wi = contexts[:,1:-1]
-    ti = contexts[:,-1:]
-    ti = ti.reshape(ti.shape[0])
+    ctxs = T.imatrix('contexts')
+    fileIndices = ctxs[:,0:1]
+    wordIndices = ctxs[:,1:-1]
+    targetIndices = T.reshape(ctxs[:,-1:], (ctxs.shape[0],))
 
-    fileIndices = theano.shared(fi, borrow=True)
-    wordIndices = theano.shared(wi, borrow=True)
-    targetIndices = theano.shared(ti, borrow=True)
-
+    files = fileEmbeddings[fileIndices]
+    fileFeatures = T.flatten(files, outdim=2)
     words = wordEmbeddings[wordIndices]
-    wordFeatures = T.reshape(words, (words.shape[0], words.shape[1] * words.shape[2]))
-    probabilities = T.nnet.softmax(T.dot(wordFeatures, weights) + biases)
+    wordFeatures = T.flatten(words, outdim=2)
+    features = T.concatenate([fileFeatures, wordFeatures], axis=1)
 
-    parameters = [weights, biases]
+    probabilities = T.nnet.softmax(T.dot(features, weights) + biases)
+
+    parameters = [fileEmbeddings, weights, biases]
 
     l1Coefficient = T.scalar('l1Coefficient', dtype=floatX)
     l2Coefficient = T.scalar('l2Coefficient', dtype=floatX)
@@ -57,18 +58,40 @@ def train(fileIndexMap, wordIndexMap, wordEmbeddings, contexts):
     updates = [(p, p - learningRate * g) for p, g in zip(parameters, gradients)]
 
     trainModel = theano.function(
-        inputs=[learningRate, l1Coefficient, l2Coefficient],
+        inputs=[ctxs, learningRate, l1Coefficient, l2Coefficient],
         outputs=cost,
         updates=updates
     )
 
     errors = []
-    epochs = 300
+    epochs = 1000
     for epoch in xrange(0, epochs):
-        error = trainModel(0.5, 0.006, 0.001)
+        error = trainModel(contexts, 0.5, 0.006, 0.001)
         errors.append(error)
 
-        log.progress('Training model: {0:.3f}%. Error: {1:.3f}.', epoch + 1, epochs, float(error))
+        biochemistry = '../data/Drosophila/Prepared/drosophila/0_biochemistry.txt'
+        biology = '../data/Drosophila/Prepared/drosophila/0_biology.txt'
+        galaxy = '../data/Drosophila/Prepared/drosophila/1_galaxy.txt'
+        star = '../data/Drosophila/Prepared/drosophila/1_star.txt'
+
+        biochemistryIndex = fileIndexMap[biochemistry]
+        biologyIndex = fileIndexMap[biology]
+        galaxyIndex = fileIndexMap[galaxy]
+        starIndex = fileIndexMap[star]
+
+        fe = fileEmbeddings.get_value()
+
+        biochemistryVector = fe[biochemistryIndex]
+        biologyVector = fe[biologyIndex]
+        galaxyVector = fe[galaxyIndex]
+        starVector = fe[starIndex]
+
+        log.progress('Training model: {0:.3f}%. Error: {1:.3f}. Biochemistry/Biology={2:.3f}. Galaxy/Star={3:.3f}. Biology/Galaxy={4:.3f}.',
+                     epoch + 1, epochs,
+                     float(error),
+                     vectors.euclideanDistance(biochemistryVector, biologyVector),
+                     vectors.euclideanDistance(galaxyVector, starVector),
+                     vectors.euclideanDistance(biologyVector, galaxyVector))
 
     plt.grid()
     plt.scatter(np.arange(0, epochs), errors)

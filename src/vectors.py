@@ -1,4 +1,5 @@
 import math
+import numpy
 
 
 def cosineSimilarity(vectorA, vectorB):
@@ -8,3 +9,10 @@ def cosineSimilarity(vectorA, vectorB):
     denumerator = 0.000000000001 if denumerator == 0 else denumerator
 
     return numerator / denumerator
+
+
+def euclideanDistance(vectorA, vectorB):
+    distance = numpy.power([vectorA - vectorB], 2).sum()
+    distance = numpy.sqrt(distance)
+
+    return distance

@@ -128,7 +128,7 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
 if __name__ == '__main__':
     processData(
         inputDirectoryPath = '../data/Drosophila/Prepared',
-        w2vEmbeddingsFilePath = '../data/Drosophila/Processed/wiki_full_s100_w7_n7.bin',
+        w2vEmbeddingsFilePath = '../data/Drosophila/Processed/drph_s200_w7_s0_n5.bin',
         fileIndexMapFilePath = '../data/Drosophila/Parameters/file_index_map.bin',
         wordIndexMapFilePath = '../data/Drosophila/Parameters/word_index_map.bin',
         wordEmbeddingsFilePath = '../data/Drosophila/Parameters/word_embeddings.bin',
