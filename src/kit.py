@@ -1,72 +1,40 @@
-import log
-import struct
-import io
-import numpy
+import os
+from os.path import join
 
 
-def loadWord2VecVocabulary(filePath):
-    with open(filePath, 'rb') as file:
-        firstLine = file.readline()
-        embeddingsCount, embeddingSize = tuple(firstLine.split(' '))
-        embeddingsCount, embeddingSize = int(embeddingsCount), int(embeddingSize)
-        wordIndexMap = {}
+class PathTo():
+    def __init__(self, name):
+        self.name = name
+        self.dataDir = '../data'
+        self.baseDir = join(self.dataDir, name)
 
-        log.info('Vocabulary size: {0}. Embedding size: {1}.', embeddingsCount, embeddingSize)
+        self.rawDir = join(self.baseDir, 'Raw')
+        self.preparedDir = join(self.baseDir, 'Prepared')
+        self.concatenatedDir = join(self.baseDir, 'Concatenated')
+        self.processedDir = join(self.baseDir, 'Processed')
+        self.parametersDir = join(self.baseDir, 'Parameters')
 
-        embeddingIndex = 0
-        while True:
-            word = ''
-            while True:
-                char = file.read(1)
+        self.ensureDirectories(
+            self.rawDir,
+            self.preparedDir,
+            self.concatenatedDir,
+            self.processedDir,
+            self.parametersDir)
 
-                if not char:
-                    log.lineBreak()
-                    return wordIndexMap
-
-                if char == ' ':
-                    word = word.strip()
-                    break
-
-                word += char
-
-            file.seek(embeddingSize * 4, io.SEEK_CUR)
-            wordIndexMap[word] = len(wordIndexMap)
-            
-            embeddingIndex += 1
-            log.progress('Reading embeddings: {0:.3f}%.', embeddingIndex, embeddingsCount)
+        self.concatenated = join(self.concatenatedDir, 'concatenated.txt')
+        self.contexts = join(self.processedDir, 'contexts.bin')
+        self.fileIndexMap = join(self.parametersDir, 'file_index_map.bin')
+        self.fileEmbeddings = join(self.parametersDir, 'file_embeddings.bin')
+        self.wordIndexMap = join(self.parametersDir, 'word_index_map.bin')
+        self.wordEmbeddings = join(self.parametersDir, 'word_embeddings.bin')
 
 
+    def ensureDirectories(self, *directories):
+        for directory in directories:
+            if not os.path.exists(directory):
+                os.mkdir(directory)
+                os.chown(directory, 1000, 1000)
 
-def loadWord2VecEmbeddings(filePath):
-    with open(filePath, 'rb') as file:
-        firstLine = file.readline()
-        embeddingsCount, embeddingSize = tuple(firstLine.split(' '))
-        embeddingsCount, embeddingSize = int(embeddingsCount), int(embeddingSize)
-        embeddingFormat = '{0}f'.format(embeddingSize)
-        wordIndexMap = {}
-        embeddings = []
 
-        log.info('Vocabulary size: {0}. Embedding size: {1}.', embeddingsCount, embeddingSize)
-
-        embeddingIndex = 0
-        while True:
-            word = ''
-            while True:
-                char = file.read(1)
-
-                if not char:
-                    log.lineBreak()
-                    return wordIndexMap, numpy.asarray(embeddings)
-
-                if char == ' ':
-                    word = word.strip()
-                    break
-
-                word += char
-
-            embedding = struct.unpack(embeddingFormat, file.read(embeddingSize * 4))
-            wordIndexMap[word] = len(wordIndexMap)
-            embeddings.append(embedding)
-
-            embeddingIndex += 1
-            log.progress('Reading embeddings: {0:.3f}%.', embeddingIndex, embeddingsCount)
+    def w2vEmbeddings(self, fileName):
+        return join(self.processedDir, fileName)

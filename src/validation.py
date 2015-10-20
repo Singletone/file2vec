@@ -3,6 +3,7 @@ import numpy
 import re
 import os
 import random
+import itertools
 from matplotlib import colors
 from matplotlib import pyplot as plt
 
@@ -377,7 +378,7 @@ def plotEmbeddings(fileIndexMap, embeddings):
     plt.show()
 
 
-def compareEmbeddings(indexMap, embeddingsList):
+def mapEmbeddings2LowDim(indexMap, embeddingsList):
     filePaths = indexMap.keys()
     fileNames = [os.path.basename(filePath).split('.')[0] for filePath in filePaths]
 
@@ -404,6 +405,31 @@ def compareEmbeddings(indexMap, embeddingsList):
     figureManager = plt.get_current_fig_manager()
     figureManager.resize(*figureManager.window.maxsize())
 
+    plt.show()
+
+
+def compareEmbeddings(indexMap, embeddingsList, comparator=None):
+    embeddingsCount = len(indexMap)
+    embeddingIndices = numpy.arange(0, embeddingsCount)
+
+    xy = [xy for xy in itertools.product(embeddingIndices, embeddingIndices)]
+    xx, yy = zip(*xy)
+
+    if comparator is None:
+        comparator = vectors.euclideanDistance
+
+    comparisons = [comparator(embeddingsList[x], embeddingsList[y]) for x, y in xy]
+    comparisons = numpy.reshape(comparisons, (embeddingsCount, embeddingsCount))
+
+    plt.subplot(111)
+
+    filePaths = indexMap.keys()
+    fileNames = [os.path.basename(filePath).split('.')[0] for filePath in filePaths]
+
+    plt.xticks(xx, fileNames, size='small')
+    plt.yticks(yy, fileNames, size='small')
+
+    plt.contourf(comparisons)
     plt.show()
 
 

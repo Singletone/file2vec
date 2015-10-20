@@ -1,12 +1,14 @@
+import numpy as np
+import time
+
 import theano
 import theano.tensor as T
+
 import parameters
 import log
-import numpy as np
 import vectors
-import time
-from matplotlib import pyplot as plt
-
+import validation
+import kit
 
 floatX = theano.config.floatX
 empty = lambda *shape: np.empty(shape, dtype='int32')
@@ -75,9 +77,9 @@ def train(fileIndexMap, wordIndexMap, wordEmbeddings, contexts):
     )
 
     startTime = time.time()
-    errors, bb, gs, bg = [], [], [], []
-    epochs = 300
-    bs = 50 # bs for batchSize
+    errors, sames0, sames1, diffs0 = [], [], [], []
+    epochs = 10
+    bs = 100 # bs for batchSize
     for epoch in xrange(0, epochs):
         contextsCount = contexts.shape[0]
         batchesCount = contextsCount / bs + int(contextsCount % bs > 0)
@@ -87,57 +89,56 @@ def train(fileIndexMap, wordIndexMap, wordEmbeddings, contexts):
 
         errors.append(error)
 
-        biochemistry = '../data/Drosophila/Prepared/drosophila/0_biochemistry.txt'
-        biology = '../data/Drosophila/Prepared/drosophila/0_biology.txt'
-        galaxy = '../data/Drosophila/Prepared/drosophila/1_galaxy.txt'
-        star = '../data/Drosophila/Prepared/drosophila/1_star.txt'
-
-        biochemistryIndex = fileIndexMap[biochemistry]
-        biologyIndex = fileIndexMap[biology]
-        galaxyIndex = fileIndexMap[galaxy]
-        starIndex = fileIndexMap[star]
+        tank0 = '../data/Duplicates/Prepared/duplicates/tank_0.txt'
+        tank1 = '../data/Duplicates/Prepared/duplicates/tank_1.txt'
+        virus0 = '../data/Duplicates/Prepared/duplicates/virus_0.txt'
+        virus1 = '../data/Duplicates/Prepared/duplicates/virus_1.txt'
 
         fe = fileEmbeddings.get_value()
 
-        biochemistryVector = fe[biochemistryIndex]
-        biologyVector = fe[biologyIndex]
-        galaxyVector = fe[galaxyIndex]
-        starVector = fe[starIndex]
+        biochemistryVector = fe[fileIndexMap[tank0]]
+        biologyVector = fe[fileIndexMap[tank1]]
+        galaxyVector = fe[fileIndexMap[virus0]]
+        starVector = fe[fileIndexMap[virus1]]
 
         elapsed = time.time() - startTime
         secondsPerEpoch = elapsed / (epoch + 1)
 
-        bbi = vectors.euclideanDistance(biochemistryVector, biologyVector)
-        gsi = vectors.euclideanDistance(galaxyVector, starVector)
-        bgi = vectors.euclideanDistance(biologyVector, galaxyVector)
+        same0 = vectors.euclideanDistance(fe[fileIndexMap[tank0]], fe[fileIndexMap[tank1]])
+        same1 = vectors.euclideanDistance(fe[fileIndexMap[virus0]], fe[fileIndexMap[virus1]])
+        diff0 = vectors.euclideanDistance(fe[fileIndexMap[tank0]], fe[fileIndexMap[virus0]])
 
-        bb.append(bbi)
-        gs.append(gsi)
-        bg.append(bgi)
+        sames0.append(same0)
+        sames1.append(same1)
+        diffs0.append(diff0)
 
-        log.progress('Training model: {0:.3f}%. {1:.3f} sec per epoch. Error: {2:.3f}. Biochemistry/Biology={3:.3f}. Galaxy/Star={4:.3f}. Biology/Galaxy={5:.3f}.',
+        log.progress('Training model: {0:.3f}%. {1:.3f} sec per epoch. Error: {2:.3f}. Tank/Tank={3:.3f}. Virus/Virus={4:.3f}. Tank/Virus={5:.3f}.',
                      epoch + 1, epochs,
                      secondsPerEpoch,
                      float(error),
-                     bbi,
-                     gsi,
-                     bgi)
+                     same0,
+                     same1,
+                     diff0)
 
-    plt.grid()
+    # plt.grid()
     # plt.scatter(np.arange(0, epochs), errors, c='r')
-    plt.scatter(np.arange(0, epochs), bb, c='b')
-    plt.scatter(np.arange(0, epochs), gs, c='b')
-    plt.scatter(np.arange(0, epochs), bg, c='g')
-    plt.show()
+    # plt.scatter(np.arange(0, epochs), sames0, c='b')
+    # plt.scatter(np.arange(0, epochs), sames1, c='b')
+    # plt.scatter(np.arange(0, epochs), diffs0, c='g')
+    # plt.show()
+
+    validation.compareEmbeddings(fileIndexMap, fileEmbeddings.get_value())
 
 
 def main():
-    fileIndexMap = parameters.loadIndexMap('../data/Drosophila/Parameters/file_index_map.bin')
-    wordIndexMap = parameters.loadIndexMap('../data/Drosophila/Parameters/word_index_map.bin')
-    indexWordMap = parameters.loadIndexMap('../data/Drosophila/Parameters/word_index_map.bin', inverse=True)
-    wordEmbeddings = parameters.loadEmbeddings('../data/Drosophila/Parameters/word_embeddings.bin')
+    pathTo = kit.PathTo('Duplicates')
 
-    contextProvider = parameters.IndexContextProvider('../data/Drosophila/Processed/contexts.bin')
+    fileIndexMap = parameters.loadIndexMap(pathTo.fileIndexMap)
+    wordIndexMap = parameters.loadIndexMap(pathTo.wordIndexMap)
+    indexWordMap = parameters.loadIndexMap(pathTo.wordIndexMap, inverse=True)
+    wordEmbeddings = parameters.loadEmbeddings(pathTo.wordEmbeddings)
+
+    contextProvider = parameters.IndexContextProvider(pathTo.contexts)
     contexts = contextProvider[:]
 
     log.info('Contexts loading complete. {0} contexts loaded {1} words each.', len(contexts), contextProvider.contextSize)

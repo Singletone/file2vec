@@ -4,6 +4,7 @@ import glob
 import time
 import re
 import gzip
+import kit
 
 import log
 
@@ -112,7 +113,7 @@ def prepareWikipediaDumps(inputDirectoryPath, outputDirectoryPath, outputConcatF
     if os.path.exists(outputConcatFilePath):
         os.remove(outputConcatFilePath)
 
-    pathName = inputDirectoryPath + '/*wiki*.txt.gz'
+    pathName = inputDirectoryPath + '/*.txt.gz'
     dumpPaths = glob.glob(pathName)
     dumpsCount = len(dumpPaths)
     pagesCount = 0
@@ -159,8 +160,11 @@ def prepareWikipediaDumps(inputDirectoryPath, outputDirectoryPath, outputConcatF
 
     log.lineBreak()
 
+
 if __name__ == '__main__':
+    pathTo = kit.PathTo('Duplicates')
+
     prepareWikipediaDumps(
-        inputDirectoryPath = '../data/Drosophila/Raw',
-        outputDirectoryPath = '../data/Drosophila/Prepared',
-        outputConcatFilePath = '../data/Drosophila/Concatenated/drosophila.txt')
+        inputDirectoryPath = pathTo.rawDir,
+        outputDirectoryPath = pathTo.preparedDir,
+        outputConcatFilePath = pathTo.concatenated)
