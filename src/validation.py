@@ -269,25 +269,9 @@ def validate(wordIndexMap, embeddings):
     return rg, sim353, sl999, syntRel, sat
 
 
-def dump(metricsPath, epoch, superBatchIndex, *metrics, **customMetrics):
-    rg, sim353, sl999, syntRel, sat = metrics
-    metrics = [metric for metric in metrics if metric != metric]
-
-    median = numpy.median(metrics)
-    mean = numpy.mean(metrics)
-    total = numpy.sum(metrics)
-
+def dump(metricsPath, epoch, customMetrics):
     metrics = {
-        'epoch': epoch,
-        'superBatchIndex': superBatchIndex,
-        'rg': rg,
-        'sim353': sim353,
-        'sl999': sl999,
-        'syntRel': syntRel,
-        'sat': sat,
-        'median': median,
-        'mean': mean,
-        'total': total
+        'epoch': epoch
     }
 
     for name, value in customMetrics.items():
@@ -425,9 +409,10 @@ def compareEmbeddings(indexMap, embeddingsList, comparator=None):
 
     filePaths = indexMap.keys()
     fileNames = [os.path.basename(filePath).split('.')[0] for filePath in filePaths]
+    indices = [indexMap[filePath] for filePath in filePaths]
 
-    plt.xticks(xx, fileNames, size='small')
-    plt.yticks(yy, fileNames, size='small')
+    plt.xticks(indices, fileNames, size='small', rotation='vertical')
+    plt.yticks(indices, fileNames, size='small')
 
     plt.contourf(comparisons)
     plt.show()

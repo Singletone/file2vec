@@ -115,6 +115,7 @@ def prepareWikipediaDumps(inputDirectoryPath, outputDirectoryPath, outputConcatF
 
     pathName = inputDirectoryPath + '/*.txt.gz'
     dumpPaths = glob.glob(pathName)
+    dumpPaths = sorted(dumpPaths)
     dumpsCount = len(dumpPaths)
     pagesCount = 0
 

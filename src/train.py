@@ -1,5 +1,6 @@
 import numpy as np
 import time
+import os
 
 import theano
 import theano.tensor as T
@@ -16,7 +17,7 @@ rnd1 = lambda d0: np.random.rand(d0).astype(dtype=floatX)
 rnd2 = lambda d0, d1: np.random.rand(d0, d1).astype(dtype=floatX)
 
 
-def train(fileIndexMap, wordIndexMap, wordEmbeddings, contexts):
+def train(fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPath):
     contextsCount = len(contexts)
 
     filesCount = len(fileIndexMap)
@@ -77,8 +78,7 @@ def train(fileIndexMap, wordIndexMap, wordEmbeddings, contexts):
     )
 
     startTime = time.time()
-    errors, sames0, sames1, diffs0 = [], [], [], []
-    epochs = 10
+    epochs = 50
     bs = 100 # bs for batchSize
     for epoch in xrange(0, epochs):
         contextsCount = contexts.shape[0]
@@ -87,45 +87,29 @@ def train(fileIndexMap, wordIndexMap, wordEmbeddings, contexts):
         for bi in xrange(0, batchesCount): # bi for batchIndex
             error = trainModel(bi, bs, 0.4, 0.006, 0.001)
 
-        errors.append(error)
-
-        tank0 = '../data/Duplicates/Prepared/duplicates/tank_0.txt'
-        tank1 = '../data/Duplicates/Prepared/duplicates/tank_1.txt'
-        virus0 = '../data/Duplicates/Prepared/duplicates/virus_0.txt'
-        virus1 = '../data/Duplicates/Prepared/duplicates/virus_1.txt'
-
         fe = fileEmbeddings.get_value()
+        we = lambda key: fe[fileIndexMap['../data/Duplicates/Prepared/duplicates/{0}.txt'.format(key)]]
+        distance = lambda left, right: vectors.euclideanDistance(we(left), we(right))
 
-        biochemistryVector = fe[fileIndexMap[tank0]]
-        biologyVector = fe[fileIndexMap[tank1]]
-        galaxyVector = fe[fileIndexMap[virus0]]
-        starVector = fe[fileIndexMap[virus1]]
+        metrics = {
+            'tanks': distance('tank_0', 'tank_1'),
+            'viruses': distance('virus_0', 'virus_1'),
+            'tankVirus': distance('tank_0', 'virus_0'),
+            'error': error
+        }
+
+        validation.dump(metricsPath, epoch, metrics)
 
         elapsed = time.time() - startTime
         secondsPerEpoch = elapsed / (epoch + 1)
 
-        same0 = vectors.euclideanDistance(fe[fileIndexMap[tank0]], fe[fileIndexMap[tank1]])
-        same1 = vectors.euclideanDistance(fe[fileIndexMap[virus0]], fe[fileIndexMap[virus1]])
-        diff0 = vectors.euclideanDistance(fe[fileIndexMap[tank0]], fe[fileIndexMap[virus0]])
-
-        sames0.append(same0)
-        sames1.append(same1)
-        diffs0.append(diff0)
-
-        log.progress('Training model: {0:.3f}%. {1:.3f} sec per epoch. Error: {2:.3f}. Tank/Tank={3:.3f}. Virus/Virus={4:.3f}. Tank/Virus={5:.3f}.',
+        log.progress('Training model: {0:.3f}%. {1:.3f} sec per epoch. Error: {2:.3f}. Tanks={3:.3f}. Viruses={4:.3f}. Tank/Virus={5:.3f}.',
                      epoch + 1, epochs,
                      secondsPerEpoch,
                      float(error),
-                     same0,
-                     same1,
-                     diff0)
-
-    # plt.grid()
-    # plt.scatter(np.arange(0, epochs), errors, c='r')
-    # plt.scatter(np.arange(0, epochs), sames0, c='b')
-    # plt.scatter(np.arange(0, epochs), sames1, c='b')
-    # plt.scatter(np.arange(0, epochs), diffs0, c='g')
-    # plt.show()
+                     metrics['tanks'],
+                     metrics['viruses'],
+                     metrics['tankVirus'])
 
     validation.compareEmbeddings(fileIndexMap, fileEmbeddings.get_value())
 
@@ -137,13 +121,17 @@ def main():
     wordIndexMap = parameters.loadIndexMap(pathTo.wordIndexMap)
     indexWordMap = parameters.loadIndexMap(pathTo.wordIndexMap, inverse=True)
     wordEmbeddings = parameters.loadEmbeddings(pathTo.wordEmbeddings)
+    metricsPath = pathTo.metrics('history.csv')
+
+    if os.path.exists(metricsPath):
+        os.remove(metricsPath)
 
     contextProvider = parameters.IndexContextProvider(pathTo.contexts)
     contexts = contextProvider[:]
 
     log.info('Contexts loading complete. {0} contexts loaded {1} words each.', len(contexts), contextProvider.contextSize)
 
-    train(fileIndexMap, wordIndexMap, wordEmbeddings, contexts)
+    train(fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPath)
 
 
 if __name__ == '__main__':

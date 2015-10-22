@@ -13,13 +13,15 @@ class PathTo():
         self.concatenatedDir = join(self.baseDir, 'Concatenated')
         self.processedDir = join(self.baseDir, 'Processed')
         self.parametersDir = join(self.baseDir, 'Parameters')
+        self.metricsDir = join(self.baseDir, 'Metrics')
 
         self.ensureDirectories(
             self.rawDir,
             self.preparedDir,
             self.concatenatedDir,
             self.processedDir,
-            self.parametersDir)
+            self.parametersDir,
+            self.metricsDir)
 
         self.concatenated = join(self.concatenatedDir, 'concatenated.txt')
         self.contexts = join(self.processedDir, 'contexts.bin')
@@ -38,3 +40,7 @@ class PathTo():
 
     def w2vEmbeddings(self, fileName):
         return join(self.processedDir, fileName)
+
+
+    def metrics(self, fileName):
+        return join(self.metricsDir, fileName)
