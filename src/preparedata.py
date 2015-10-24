@@ -163,7 +163,7 @@ def prepareWikipediaDumps(inputDirectoryPath, outputDirectoryPath, outputConcatF
 
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('Duplicates')
+    pathTo = kit.PathTo('Cockatoo')
 
     prepareWikipediaDumps(
         inputDirectoryPath = pathTo.rawDir,

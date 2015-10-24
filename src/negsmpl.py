@@ -87,19 +87,19 @@ def train(fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPath, neg
     )
 
     startTime = time.time()
-    epochs = 50
+    epochs = 30
     bs = 50 # bs for batchSize
     for epoch in xrange(0, epochs):
         contextsCount = contexts.shape[0]
         batchesCount = contextsCount / bs + int(contextsCount % bs > 0)
 
         for bi in xrange(0, batchesCount): # bi for batchIndex
-            error = trainModel(bi, bs, 0.004, 0.006, 0.001)
+            error = trainModel(bi, bs, 0.01, 0.02, 0.005)
             if error <= 0:
                 break
 
         fe = fileEmbeddings.get_value()
-        we = lambda key: fe[fileIndexMap['../data/Duplicates/Prepared/duplicates/{0}.txt'.format(key)]]
+        we = lambda key: fe[fileIndexMap['../data/Cockatoo/Prepared/cockatoo/{0}.txt'.format(key)]]
         distance = lambda left, right: vectors.euclideanDistance(we(left), we(right))
 
         metrics = {
@@ -126,10 +126,11 @@ def train(fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPath, neg
             break
 
     validation.compareEmbeddings(fileIndexMap, fileEmbeddings.get_value())
+    validation.plotEmbeddings(fileIndexMap, fileEmbeddings.get_value())
 
 
 def main():
-    pathTo = kit.PathTo('Duplicates')
+    pathTo = kit.PathTo('Cockatoo')
 
     fileIndexMap = parameters.loadIndexMap(pathTo.fileIndexMap)
     wordIndexMap = parameters.loadIndexMap(pathTo.wordIndexMap)
