@@ -87,14 +87,16 @@ def train(fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPath, neg
     )
 
     startTime = time.time()
-    epochs = 10
+    epochs = 50
     bs = 50 # bs for batchSize
     for epoch in xrange(0, epochs):
         contextsCount = contexts.shape[0]
         batchesCount = contextsCount / bs + int(contextsCount % bs > 0)
 
         for bi in xrange(0, batchesCount): # bi for batchIndex
-            error = trainModel(bi, bs, 0.009, 0.006, 0.001)
+            error = trainModel(bi, bs, 0.004, 0.006, 0.001)
+            if error <= 0:
+                break
 
         fe = fileEmbeddings.get_value()
         we = lambda key: fe[fileIndexMap['../data/Duplicates/Prepared/duplicates/{0}.txt'.format(key)]]
@@ -119,6 +121,9 @@ def train(fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPath, neg
                      metrics['tanks'],
                      metrics['viruses'],
                      metrics['tankVirus'])
+
+        if error <= 0:
+            break
 
     validation.compareEmbeddings(fileIndexMap, fileEmbeddings.get_value())
 
