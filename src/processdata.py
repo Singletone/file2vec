@@ -127,7 +127,7 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
 
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('Cockatoo')
+    pathTo = kit.PathTo('Duplicates')
 
     processData(
         inputDirectoryPath = pathTo.preparedDir,

@@ -102,9 +102,9 @@ def train(model, fileIndexMap, fileEmbeddingSize, wordIndexMap, wordEmbeddings, 
         distance = lambda left, right: vectors.euclideanDistance(we(left), we(right))
 
         metrics = {
-            'tanks': distance('tank_0', 'tank_1'),
+            'spiders': distance('spider_0', 'spider_1'),
             'viruses': distance('virus_0', 'virus_1'),
-            'tankVirus': distance('tank_0', 'virus_0'),
+            'spiderVirus': distance('spider_0', 'virus_0'),
             'error': error
         }
 
@@ -113,13 +113,13 @@ def train(model, fileIndexMap, fileEmbeddingSize, wordIndexMap, wordEmbeddings, 
         elapsed = time.time() - startTime
         secondsPerEpoch = elapsed / (epoch + 1)
 
-        log.progress('Training model: {0:.3f}%. {1:.3f} sec per epoch. Error: {2:.3f}. Tanks={3:.3f}. Viruses={4:.3f}. Tank/Virus={5:.3f}.',
+        log.progress('Training model: {0:.3f}%. {1:.3f} sec per epoch. Error: {2:.3f}. Spiders={3:.3f}. Viruses={4:.3f}. Spider/Virus={5:.3f}.',
                      epoch + 1, epochs,
                      secondsPerEpoch,
                      float(error),
-                     metrics['tanks'],
+                     metrics['spiders'],
                      metrics['viruses'],
-                     metrics['tankVirus'])
+                     metrics['spiderVirus'])
 
         if error <= 0:
             break
@@ -151,7 +151,7 @@ def main():
     model = Model(filesCount, 200, wordEmbeddings, contextSize)
 
     train(model, fileIndexMap, 200, wordIndexMap, wordEmbeddings, contexts, metricsPath,
-          epochs=5,
+          epochs=50,
           batchSize=50,
           learningRate=0.01,
           negative=10,
