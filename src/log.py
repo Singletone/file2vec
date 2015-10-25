@@ -19,6 +19,11 @@ def lineBreak():
 
 
 def progress(messageFormat, index, count, *args):
+    maxFrequency = 10000
+    maxFrequency = count / maxFrequency
+    if maxFrequency != 0 and index % maxFrequency > 0:
+        return
+
     index = float(index)
     count = float(count)
     percentage = 100 * index / count

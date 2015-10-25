@@ -129,7 +129,7 @@ def main():
     contextProvider = parameters.IndexContextProvider(pathTo.contexts)
     contexts = contextProvider[:]
 
-    log.info('Contexts loading complete. {0} contexts loaded {1} words each.', len(contexts), contextProvider.contextSize)
+    log.info('Contexts loading complete. {0} contexts loaded {1} words each.', len(contexts), contextProvider.windowSize)
 
     train(fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPath)
 

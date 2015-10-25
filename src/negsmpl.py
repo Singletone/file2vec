@@ -4,7 +4,6 @@ import os
 
 import theano
 import theano.tensor as T
-from theano.tensor.shared_randomstreams import RandomStreams
 
 import parameters
 import log
@@ -19,23 +18,21 @@ rnd2 = lambda d0, d1: np.random.rand(d0, d1).astype(dtype=floatX)
 
 
 class Model():
-    def __init__(self, filesCount, fileEmbeddingSize, wordEmbeddings, contextSize):
+    def __init__(self, filesCount, fileEmbeddingSize, wordEmbeddings, contextSize, negative):
         wordsCount, wordEmbeddingSize = wordEmbeddings.shape
 
         self.fileEmbeddings = theano.shared(rnd2(filesCount, fileEmbeddingSize), 'fileEmbeddings', borrow=True)
         wordEmbeddings = theano.shared(wordEmbeddings, 'wordEmbeddings', borrow=True)
         weights = theano.shared(rnd2(fileEmbeddingSize + contextSize * wordEmbeddingSize, wordsCount), 'weights', borrow=True)
 
+        fileIndicesOffset = 0
+        wordIndicesOffset = fileIndicesOffset + 1
+        indicesOffset = wordIndicesOffset + contextSize
+
         contexts = T.imatrix('contexts')
-        fileIndices = contexts[:,0:1]
-        wordIndices = contexts[:,1:-1]
-        targetIndices = T.reshape(contexts[:,-1:], (contexts.shape[0],1))
-
-        negative = T.iscalar('negative')
-
-        random = RandomStreams(0)
-        negativeSampleIndices = random.random_integers((targetIndices.shape[0], negative), low=0, high=wordsCount-1)
-        indices = T.concatenate([targetIndices, negativeSampleIndices], axis=1)
+        fileIndices = contexts[:,fileIndicesOffset:wordIndicesOffset]
+        wordIndices = contexts[:,wordIndicesOffset:indicesOffset]
+        indices = contexts[:,indicesOffset:indicesOffset + negative]
 
         files = self.fileEmbeddings[fileIndices]
         fileFeatures = T.flatten(files, outdim=2)
@@ -74,7 +71,7 @@ class Model():
         self.trainingContexts = theano.shared(empty(1,1), 'trainingContexts', borrow=True)
 
         self.trainModel = theano.function(
-            inputs=[batchIndex, bs, negative, lr, l1Coefficient, l2Coefficient],
+            inputs=[batchIndex, bs, lr, l1Coefficient, l2Coefficient],
             outputs=cost,
             updates=updates,
             givens={
@@ -93,7 +90,7 @@ def train(model, fileIndexMap, fileEmbeddingSize, wordIndexMap, wordEmbeddings, 
         batchesCount = contextsCount / batchSize + int(contextsCount % batchSize > 0)
 
         for bi in xrange(0, batchesCount):
-            error = model.trainModel(bi, batchSize, negative, learningRate, l1, l2)
+            error = model.trainModel(bi, batchSize, learningRate, l1, l2)
             if error <= 0:
                 break
 
@@ -102,9 +99,9 @@ def train(model, fileIndexMap, fileEmbeddingSize, wordIndexMap, wordEmbeddings, 
         distance = lambda left, right: vectors.euclideanDistance(we(left), we(right))
 
         metrics = {
-            'spiders': distance('spider_0', 'spider_1'),
+            'tanks': distance('tank_0', 'tank_1'),
             'viruses': distance('virus_0', 'virus_1'),
-            'spiderVirus': distance('spider_0', 'virus_0'),
+            'tankVirus': distance('tank_0', 'virus_0'),
             'error': error
         }
 
@@ -117,9 +114,9 @@ def train(model, fileIndexMap, fileEmbeddingSize, wordIndexMap, wordEmbeddings, 
                      epoch + 1, epochs,
                      secondsPerEpoch,
                      float(error),
-                     metrics['spiders'],
+                     metrics['tanks'],
                      metrics['viruses'],
-                     metrics['spiderVirus'])
+                     metrics['tankVirus'])
 
         if error <= 0:
             break
@@ -142,13 +139,17 @@ def main():
         os.remove(metricsPath)
 
     contextProvider = parameters.IndexContextProvider(pathTo.contexts)
-    contexts = contextProvider[:]
-    windowSize = contexts.shape[1] - 1
+    windowSize = contextProvider.windowSize - 1
     contextSize = windowSize - 1
+    negative = contextProvider.negative
+    contexts = contextProvider[:]
 
-    log.info('Contexts loading complete. {0} contexts loaded {1} words each.', len(contexts), contextProvider.contextSize)
+    log.info('Contexts loading complete. {0} contexts loaded {1} words and {2} negative samples each.',
+             len(contexts),
+             contextProvider.windowSize,
+             contextProvider.negative)
 
-    model = Model(filesCount, 200, wordEmbeddings, contextSize)
+    model = Model(filesCount, 200, wordEmbeddings, contextSize, negative)
 
     train(model, fileIndexMap, 200, wordIndexMap, wordEmbeddings, contexts, metricsPath,
           epochs=50,

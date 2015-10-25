@@ -9,46 +9,48 @@ import log
 class IndexContextProvider():
     def __init__(self, contextsFilePath):
         self.contextsFilePath = contextsFilePath
-        self.contextsCount, self.contextSize = self.getContextsShape()
+        self.windowsCount, self.windowSize, self.negative = self.getContextsShape()
 
 
     def __getitem__(self, item):
         if isinstance(item, slice):
             start = item.start or 0
-            stop = item.stop if item.stop <= self.contextsCount else self.contextsCount
+            stop = item.stop if item.stop <= self.windowsCount else self.windowsCount
             step = item.step or 1
 
             return self.getContexts(start, stop, step)
 
-        return self.getContexts(item, item + 1, 1)
+        return self.getContexts(item, item + 1, 1)[0]
 
 
     def getContextsShape(self):
         with open(self.contextsFilePath) as contextsFile:
             contextsCount = contextsFile.read(4)
             contextSize = contextsFile.read(4)
+            negative = contextsFile.read(4)
 
             contextsCount = struct.unpack('i', contextsCount)[0]
             contextSize = struct.unpack('i', contextSize)[0]
+            negative = struct.unpack('i', negative)[0]
 
-            return contextsCount, contextSize
+            return contextsCount, contextSize, negative
 
 
     def getContexts(self, start, stop, step):
         if step == 1:
             with open(self.contextsFilePath) as contextsFile:
                 count = stop - start
-                contextBufferSize = self.contextSize * 4
+                contextBufferSize = (self.windowSize + self.negative) * 4
                 contextsBufferSize = count * contextBufferSize
-                startPosition = start * contextBufferSize + 8 # 8 for contextsCount + contextSize
+                startPosition = start * contextBufferSize + 12 # 12 for contextsCount + contextSize + negative
 
                 contextsFile.seek(startPosition, io.SEEK_SET)
                 contextsBuffer = contextsFile.read(contextsBufferSize)
 
-                contextFormat = '{0}i'.format(self.contextSize * count)
+                contextFormat = '{0}i'.format((self.windowSize + self.negative) * count)
                 contexts = struct.unpack(contextFormat, contextsBuffer)
 
-                contexts = numpy.reshape(contexts, (count, self.contextSize))
+                contexts = numpy.reshape(contexts, (count, (self.windowSize + self.negative)))
         else:
             contexts = []
             for contextIndex in xrange(start, stop, step):
@@ -133,6 +135,8 @@ def dumpEmbeddings(embeddings, embeddingsFilePath):
             embeddingsFile.write(embedding)
 
             log.progress('Dumping embeddings: {0:.3f}%.', embeddingIndex + 1, embeddingsCount)
+
+        log.lineBreak()
 
 
 def loadEmbeddings(embeddingsFilePath):
