@@ -100,9 +100,9 @@ def train(model, fileIndexMap, fileEmbeddingSize, wordIndexMap, wordEmbeddings, 
 
         metrics = {
             'tanks': distance('tank_0', 'tank_1'),
-            'viruses': distance('virus_0', 'virus_1'),
-            'tankVirus': distance('tank_0', 'virus_0'),
-            'carVirus': distance('car_0', 'virus_0'),
+            'alexes': distance('alex_0', 'alex_1'),
+            'tankAlex': distance('tank_0', 'alex_0'),
+            'carAlex': distance('car_0', 'alex_0'),
             'spiderNasa': distance('spider_0', 'nasa_0'),
             'error': error
         }
@@ -112,14 +112,14 @@ def train(model, fileIndexMap, fileEmbeddingSize, wordIndexMap, wordEmbeddings, 
         elapsed = time.time() - startTime
         secondsPerEpoch = elapsed / (epoch + 1)
 
-        log.progress('Training model: {0:.3f}%. {1:.3f} sec per epoch. Error: {2:.3f}. Spiders={3:.3f}. Viruses={4:.3f}. Spider/Virus={5:.3f}. Car/Virus={6:.3f}. Spider/Nasa={7:.3f}.',
+        log.progress('Training model: {0:.3f}%. {1:.3f} sec per epoch. Error: {2:.3f}. Spiders={3:.3f}. Alexes={4:.3f}. Tank/Alex={5:.3f}. Car/Alex={6:.3f}. Spider/Nasa={7:.3f}.',
                      epoch + 1, epochs,
                      secondsPerEpoch,
                      float(error),
                      metrics['tanks'],
-                     metrics['viruses'],
-                     metrics['tankVirus'],
-                     metrics['carVirus'],
+                     metrics['alexes'],
+                     metrics['tankAlex'],
+                     metrics['carAlex'],
                      metrics['spiderNasa'])
 
         if error <= 0:
@@ -156,9 +156,9 @@ def main():
     model = Model(filesCount, 200, wordEmbeddings, contextSize, negative)
 
     train(model, fileIndexMap, 200, wordIndexMap, wordEmbeddings, contexts, metricsPath,
-          epochs=5,
+          epochs=20,
           batchSize=50,
-          learningRate=0.05,
+          learningRate=0.01,
           negative=10,
           l1=0.02,
           l2=0.005)

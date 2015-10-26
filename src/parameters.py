@@ -4,6 +4,7 @@ import struct
 import numpy
 
 import log
+import binary as bin
 
 
 class IndexContextProvider():
@@ -25,13 +26,9 @@ class IndexContextProvider():
 
     def getContextsShape(self):
         with open(self.contextsFilePath) as contextsFile:
-            contextsCount = contextsFile.read(4)
-            contextSize = contextsFile.read(4)
-            negative = contextsFile.read(4)
-
-            contextsCount = struct.unpack('i', contextsCount)[0]
-            contextSize = struct.unpack('i', contextSize)[0]
-            negative = struct.unpack('i', negative)[0]
+            contextsCount = bin.readi(contextsFile)
+            contextSize = bin.readi(contextsFile)
+            negative = bin.readi(contextsFile)
 
             return contextsCount, contextSize, negative
 
@@ -40,15 +37,15 @@ class IndexContextProvider():
         if step == 1:
             with open(self.contextsFilePath) as contextsFile:
                 count = stop - start
-                contextBufferSize = (self.windowSize + self.negative) * 4
-                contextsBufferSize = count * contextBufferSize
-                startPosition = start * contextBufferSize + 12 # 12 for contextsCount + contextSize + negative
+                contextSize = self.windowSize + self.negative
+                contextsSize = count * contextSize
+                contextBufferSize = contextSize * 4
+
+                # 12 for sizeof(contextsCount) + sizeof(contextSize) + sizeof(negative)
+                startPosition = start * contextBufferSize + 12
 
                 contextsFile.seek(startPosition, io.SEEK_SET)
-                contextsBuffer = contextsFile.read(contextsBufferSize)
-
-                contextFormat = '{0}i'.format((self.windowSize + self.negative) * count)
-                contexts = struct.unpack(contextFormat, contextsBuffer)
+                contexts = bin.readi(contextsFile, contextsSize)
 
                 contexts = numpy.reshape(contexts, (count, (self.windowSize + self.negative)))
         else:
@@ -70,15 +67,14 @@ def dumpIndexMap(indexMap, indexMapFilePath):
         indexMapSize = len(indexMap)
         itemIndex = 0
 
-        indexMapFile.write(struct.pack('i', indexMapSize))
+        bin.writei(indexMapFile, indexMapSize)
 
         for key, index in indexMap.items():
-            keyLength = struct.pack('i', len(key))
-            index = struct.pack('i', index)
+            keyLength = len(key)
 
-            indexMapFile.write(keyLength)
-            indexMapFile.write(key)
-            indexMapFile.write(index)
+            bin.writei(indexMapFile, keyLength)
+            bin.writes(indexMapFile, key)
+            bin.writei(indexMapFile, index)
 
             itemIndex += 1
             log.progress('Dumping index map: {0:.3f}%.', itemIndex, indexMapSize)
@@ -92,17 +88,12 @@ def loadIndexMap(indexMapFilePath, inverse=False):
     vocabulary = {}
 
     with open(indexMapFilePath, 'rb') as indexMapFile:
-        itemsCount = indexMapFile.read(4)
-        itemsCount = struct.unpack('i', itemsCount)[0]
+        itemsCount = bin.readi(indexMapFile)
 
         for itemIndex in range(0, itemsCount):
-            wordLength = indexMapFile.read(4)
-            wordLength = struct.unpack('i', wordLength)[0]
-
-            word = indexMapFile.read(wordLength)
-
-            index = indexMapFile.read(4)
-            index = struct.unpack('i', index)[0]
+            wordLength = bin.readi(indexMapFile)
+            word = bin.reads(indexMapFile, wordLength)
+            index = bin.readi(indexMapFile)
 
             if inverse:
                 vocabulary[index] = word
@@ -124,15 +115,13 @@ def dumpEmbeddings(embeddings, embeddingsFilePath):
     embeddingsCount, embeddingSize = embeddings.shape
 
     with open(embeddingsFilePath, 'w') as embeddingsFile:
-        embeddingsFile.write(struct.pack('i', embeddingsCount))
-        embeddingsFile.write(struct.pack('i', embeddingSize))
+        bin.writei(embeddingsFile, embeddingsCount)
+        bin.writei(embeddingsFile, embeddingSize)
 
-        format = '{0}f'.format(embeddingSize)
         for embeddingIndex in range(0, embeddingsCount):
             embedding = embeddings[embeddingIndex]
-            embedding = struct.pack(format, *embedding)
 
-            embeddingsFile.write(embedding)
+            bin.writef(embeddingsFile, embedding)
 
             log.progress('Dumping embeddings: {0:.3f}%.', embeddingIndex + 1, embeddingsCount)
 
@@ -141,19 +130,13 @@ def dumpEmbeddings(embeddings, embeddingsFilePath):
 
 def loadEmbeddings(embeddingsFilePath):
     with open(embeddingsFilePath, 'rb') as embeddingsFile:
-        embeddingsCount = embeddingsFile.read(4)
-        embeddingsCount = struct.unpack('i', embeddingsCount)[0]
-
-        embeddingSize = embeddingsFile.read(4)
-        embeddingSize = struct.unpack('i', embeddingSize)[0]
+        embeddingsCount = bin.readi(embeddingsFile)
+        embeddingSize = bin.readi(embeddingsFile)
 
         embeddings = numpy.empty((embeddingsCount, embeddingSize))
 
-        format = '{0}f'.format(embeddingSize)
         for embeddingIndex in range(0, embeddingsCount):
-            embedding = embeddingsFile.read(embeddingSize * 4)
-            embedding = struct.unpack(format, embedding)
-
+            embedding = bin.readf(embeddingsFile, embeddingSize)
             embeddings[embeddingIndex] = embedding
 
             log.progress('Loading embeddings: {0:.3f}%.', embeddingIndex + 1, embeddingsCount)
@@ -168,7 +151,6 @@ def loadW2VParameters(filePath, loadEmbeddings=True):
         firstLine = file.readline()
         embeddingsCount, embeddingSize = tuple(firstLine.split(' '))
         embeddingsCount, embeddingSize = int(embeddingsCount), int(embeddingSize)
-        embeddingFormat = '{0}f'.format(embeddingSize)
         wordIndexMap = {}
         embeddings = []
 
@@ -196,7 +178,7 @@ def loadW2VParameters(filePath, loadEmbeddings=True):
 
             wordIndexMap[word] = len(wordIndexMap)
             if loadEmbeddings:
-                embedding = struct.unpack(embeddingFormat, file.read(embeddingSize * 4))
+                embedding = bin.readf(file, embeddingSize)
                 embeddings.append(embedding)
             else:
                 file.seek(embeddingSize * 4, io.SEEK_CUR)

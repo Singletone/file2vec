@@ -10,6 +10,7 @@ import numpy
 
 import log
 import parameters
+import binary as bin
 
 
 class WordContextProvider:
@@ -120,9 +121,9 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
     contextsCount = 0
     contextsFormat = '{0}i'.format(windowSize)
     with open(noNegativeSamplingPath, 'wb+') as noNegativeSamplingFile:
-        noNegativeSamplingFile.write(struct.pack('i', 0)) # this is a placeholder for contexts count
-        noNegativeSamplingFile.write(struct.pack('i', windowSize))
-        noNegativeSamplingFile.write(struct.pack('i', 0))
+        bin.writei(noNegativeSamplingFile, 0) # this is a placeholder for contexts count
+        bin.writei(noNegativeSamplingFile, windowSize)
+        bin.writei(noNegativeSamplingFile, 0)
 
         pathName = inputDirectoryPath + '/*/*.txt'
         textFilePaths = glob.glob(pathName)
@@ -155,7 +156,7 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
 
                 indexContext = [textFileIndex] + map(lambda w: wordIndexMap[w], wordContext)
 
-                noNegativeSamplingFile.write(struct.pack(contextsFormat, *indexContext))
+                bin.writei(noNegativeSamplingFile, indexContext)
                 contextsCount += 1
 
             textFileName = os.path.basename(textFilePath)
@@ -174,7 +175,7 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
         log.lineBreak()
 
         noNegativeSamplingFile.seek(0, io.SEEK_SET)
-        noNegativeSamplingFile.write(struct.pack('i', contextsCount))
+        bin.writei(noNegativeSamplingFile, contextsCount)
         noNegativeSamplingFile.flush()
 
     if negative > 0:
@@ -185,16 +186,16 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
 
             contextProvider = parameters.IndexContextProvider(noNegativeSamplingPath)
 
-            contextsFile.write(struct.pack('i', contextsCount))
-            contextsFile.write(struct.pack('i', windowSize))
-            contextsFile.write(struct.pack('i', negative))
+            bin.writei(contextsFile, contextsCount)
+            bin.writei(contextsFile, windowSize)
+            bin.writei(contextsFile, negative)
 
             for contextIndex in xrange(0, contextsCount):
                 context = contextProvider[contextIndex]
                 negativeSample = generateNegativeSample(negative, context, wordIndexMap, wordFrequencyMap)
                 context = numpy.concatenate([context, negativeSample])
 
-                contextsFile.write(struct.pack(contextsFormat, *context))
+                bin.writei(contextsFile, context)
 
                 currentTime = time.time()
                 elapsed = currentTime - startTime
