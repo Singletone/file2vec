@@ -122,7 +122,7 @@ def train(model, fileIndexMap, fileEmbeddingSize, wordIndexMap, wordEmbeddings, 
             break
 
     validation.compareEmbeddings(fileIndexMap, model.fileEmbeddings.get_value())
-    # validation.plotEmbeddings(fileIndexMap, model.fileEmbeddings.get_value())
+    validation.plotEmbeddings(fileIndexMap, model.fileEmbeddings.get_value())
 
 
 def main():

@@ -207,7 +207,7 @@ if __name__ == '__main__':
 
     processData(
         inputDirectoryPath = pathTo.preparedDir,
-        w2vEmbeddingsFilePath = pathTo.w2vEmbeddings('wiki_full_s100_w7_n7.bin'),
+        w2vEmbeddingsFilePath = pathTo.w2vEmbeddings('wiki_full_s200_w10_mc20_hs1.bin'),
         fileIndexMapFilePath = pathTo.fileIndexMap,
         wordIndexMapFilePath = pathTo.wordIndexMap,
         wordEmbeddingsFilePath = pathTo.wordEmbeddings,

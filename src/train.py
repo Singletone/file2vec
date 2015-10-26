@@ -21,7 +21,7 @@ def train(fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPath):
     contextsCount = len(contexts)
 
     filesCount = len(fileIndexMap)
-    fileEmbeddingSize = 200
+    fileEmbeddingSize = 400
     wordsCount = len(wordIndexMap)
     wordEmbeddingSize = wordEmbeddings.shape[1]
     windowSize = contexts.shape[1] - 1

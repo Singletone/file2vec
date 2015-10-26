@@ -39,7 +39,7 @@ class PathTo():
 
 
     def w2vEmbeddings(self, fileName):
-        return join(self.processedDir, fileName)
+        return join(self.dataDir, 'WordEmbeddings', fileName)
 
 
     def metrics(self, fileName):
