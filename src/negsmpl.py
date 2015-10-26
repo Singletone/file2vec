@@ -40,7 +40,7 @@ class Model():
         wordFeatures = T.flatten(words, outdim=2)
         features = T.concatenate([fileFeatures, wordFeatures], axis=1)
 
-        subWeights = weights[:,indices].dimshuffle(1,0,2)
+        subWeights = weights[:,indices].dimshuffle(1, 0, 2)
 
         probabilities = T.batched_dot(features, subWeights)
 
@@ -85,12 +85,12 @@ def train(model, fileIndexMap, fileEmbeddingSize, wordIndexMap, wordEmbeddings, 
     model.trainingContexts.set_value(contexts)
 
     startTime = time.time()
-    for epoch in xrange(0, epochs):
-        contextsCount = contexts.shape[0]
-        batchesCount = contextsCount / batchSize + int(contextsCount % batchSize > 0)
+    contextsCount = contexts.shape[0]
+    batchesCount = contextsCount / batchSize + int(contextsCount % batchSize > 0)
 
-        for bi in xrange(0, batchesCount):
-            error = model.trainModel(bi, batchSize, learningRate, l1, l2)
+    for epoch in xrange(0, epochs):
+        for batchIndex in xrange(0, batchesCount):
+            error = model.trainModel(batchIndex, batchSize, learningRate, l1, l2)
             if error <= 0:
                 break
 
@@ -102,6 +102,8 @@ def train(model, fileIndexMap, fileEmbeddingSize, wordIndexMap, wordEmbeddings, 
             'tanks': distance('tank_0', 'tank_1'),
             'viruses': distance('virus_0', 'virus_1'),
             'tankVirus': distance('tank_0', 'virus_0'),
+            'carVirus': distance('car_0', 'virus_0'),
+            'spiderNasa': distance('spider_0', 'nasa_0'),
             'error': error
         }
 
@@ -110,19 +112,21 @@ def train(model, fileIndexMap, fileEmbeddingSize, wordIndexMap, wordEmbeddings, 
         elapsed = time.time() - startTime
         secondsPerEpoch = elapsed / (epoch + 1)
 
-        log.progress('Training model: {0:.3f}%. {1:.3f} sec per epoch. Error: {2:.3f}. Spiders={3:.3f}. Viruses={4:.3f}. Spider/Virus={5:.3f}.',
+        log.progress('Training model: {0:.3f}%. {1:.3f} sec per epoch. Error: {2:.3f}. Spiders={3:.3f}. Viruses={4:.3f}. Spider/Virus={5:.3f}. Car/Virus={6:.3f}. Spider/Nasa={7:.3f}.',
                      epoch + 1, epochs,
                      secondsPerEpoch,
                      float(error),
                      metrics['tanks'],
                      metrics['viruses'],
-                     metrics['tankVirus'])
+                     metrics['tankVirus'],
+                     metrics['carVirus'],
+                     metrics['spiderNasa'])
 
         if error <= 0:
             break
 
     validation.compareEmbeddings(fileIndexMap, model.fileEmbeddings.get_value())
-    validation.plotEmbeddings(fileIndexMap, model.fileEmbeddings.get_value())
+    # validation.plotEmbeddings(fileIndexMap, model.fileEmbeddings.get_value())
 
 
 def main():
@@ -152,9 +156,9 @@ def main():
     model = Model(filesCount, 200, wordEmbeddings, contextSize, negative)
 
     train(model, fileIndexMap, 200, wordIndexMap, wordEmbeddings, contexts, metricsPath,
-          epochs=50,
+          epochs=5,
           batchSize=50,
-          learningRate=0.01,
+          learningRate=0.05,
           negative=10,
           l1=0.02,
           l2=0.005)

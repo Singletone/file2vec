@@ -13,17 +13,26 @@ import parameters
 
 
 class WordContextProvider:
-    def __init__(self, textFilePath, bufferSize=1073741824): # 1Mb as defeault buffer size
-        self.textFile = open(textFilePath)
+    def __init__(self, text=None, textFilePath=None, bufferSize=1073741824): # 1Mb as defeault buffer size
+        self.text = text
+        self.textFile = None
         self.bufferSize = bufferSize
+
+        if textFilePath is not None:
+            self.textFile = open(textFilePath)
 
 
     def __del__(self):
-        self.textFile.close()
+        if self.textFile is not None:
+            self.textFile.close()
 
 
     def next(self, contextSize):
-        buffer = self.textFile.read(self.bufferSize)
+        if self.textFile is not None:
+            buffer = self.textFile.read(self.bufferSize)
+        else:
+            buffer = self.text
+
         tail = ''
 
         while buffer != '':
@@ -43,7 +52,10 @@ class WordContextProvider:
 
             words = re.split('\s+', tail.lstrip())
 
-            buffer = self.textFile.read(self.bufferSize)
+            if self.textFile is not None:
+                buffer = self.textFile.read(self.bufferSize)
+            else:
+                buffer = ''
 
             if len(words) > contextSize * 2 - 1 or buffer == '':
                 if buffer != '':
@@ -122,7 +134,7 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
             fileIndexMap[textFilePath] = textFileIndex
 
             currentSentence = None
-            contextProvider = WordContextProvider(textFilePath)
+            contextProvider = WordContextProvider(textFilePath=textFilePath)
             for sentence, wordContext in contextProvider.next(wordContextSize):
                 if currentSentence != sentence:
                     currentSentence = sentence
