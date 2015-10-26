@@ -29,6 +29,7 @@ class PathTo():
         self.fileEmbeddings = join(self.parametersDir, 'file_embeddings.bin')
         self.wordIndexMap = join(self.parametersDir, 'word_index_map.bin')
         self.wordEmbeddings = join(self.parametersDir, 'word_embeddings.bin')
+        self.weights = join(self.parametersDir, 'wights.bin')
 
 
     def ensureDirectories(self, *directories):

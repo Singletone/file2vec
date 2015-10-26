@@ -10,6 +10,7 @@ import log
 import vectors
 import validation
 import kit
+import binary as bin
 
 
 floatX = theano.config.floatX
@@ -22,8 +23,8 @@ class Model():
         wordsCount, wordEmbeddingSize = wordEmbeddings.shape
 
         self.fileEmbeddings = theano.shared(rnd2(filesCount, fileEmbeddingSize), 'fileEmbeddings', borrow=True)
-        wordEmbeddings = theano.shared(wordEmbeddings, 'wordEmbeddings', borrow=True)
-        weights = theano.shared(rnd2(fileEmbeddingSize + contextSize * wordEmbeddingSize, wordsCount), 'weights', borrow=True)
+        self.wordEmbeddings = theano.shared(wordEmbeddings, 'wordEmbeddings', borrow=True)
+        self.weights = theano.shared(rnd2(fileEmbeddingSize + contextSize * wordEmbeddingSize, wordsCount), 'weights', borrow=True)
 
         fileIndicesOffset = 0
         wordIndicesOffset = fileIndicesOffset + 1
@@ -36,15 +37,15 @@ class Model():
 
         files = self.fileEmbeddings[fileIndices]
         fileFeatures = T.flatten(files, outdim=2)
-        words = wordEmbeddings[wordIndices]
+        words = self.wordEmbeddings[wordIndices]
         wordFeatures = T.flatten(words, outdim=2)
         features = T.concatenate([fileFeatures, wordFeatures], axis=1)
 
-        subWeights = weights[:,indices].dimshuffle(1, 0, 2)
+        subWeights = self.weights[:,indices].dimshuffle(1, 0, 2)
 
         probabilities = T.batched_dot(features, subWeights)
 
-        parameters = [self.fileEmbeddings, weights]
+        parameters = [self.fileEmbeddings, self.weights]
 
         l1Coefficient = T.scalar('l1Coefficient', dtype=floatX)
         l2Coefficient = T.scalar('l2Coefficient', dtype=floatX)
@@ -57,12 +58,12 @@ class Model():
 
         lr = T.scalar('learningRate', dtype=floatX)
 
-        parameters = [self.fileEmbeddings, weights]
+        parameters = [self.fileEmbeddings]
         subParameters = [files]
         gradients = [T.grad(cost, wrt=subP) for subP in subParameters]
         updates = [(p, T.inc_subtensor(subP, -lr * g)) for p, subP, g in zip(parameters, subParameters, gradients)]
 
-        parameters = [weights]
+        parameters = [self.weights]
         gradients = [T.grad(cost, wrt=p) for p in parameters]
         updates = updates + [(p, p - lr * g) for p, g in zip(parameters, gradients)]
 
@@ -78,6 +79,30 @@ class Model():
                 contexts: self.trainingContexts[batchIndex * bs : (batchIndex + 1) * bs]
             }
         )
+
+
+    def dump(self, fileEmbeddingsPath, weightsPath):
+        fileEmbeddings = self.fileEmbeddings.get_value()
+        bin.dumpMatrix(fileEmbeddings)
+
+        weights = self.weights.get_value()
+        bin.dumpMatrix(weights)
+
+
+    @staticmethod
+    def load(fileEmbeddingsPath, wordEmbeddingsPath, weightsPath):
+        fileEmbeddings = bin.loadMatrix(fileEmbeddingsPath)
+        wordEmbeddings = bin.loadMatrix(wordEmbeddingsPath)
+        weights = bin.loadMatrix(weightsPath)
+
+        filesCount, fileEmbeddingSize = fileEmbeddings.shape
+        wordsCount, wordEmbeddingSize = wordEmbeddings.shape
+        featuresCount, activationsCount = weights.shape
+        contextSize = (featuresCount - fileEmbeddingSize) / wordEmbeddingSize
+        negative = activationsCount - 1
+
+        return Model(filesCount, fileEmbeddingSize, wordEmbeddings, contextSize, negative)
+
 
 
 def train(model, fileIndexMap, fileEmbeddingSize, wordIndexMap, wordEmbeddings, contexts, metricsPath,
@@ -162,6 +187,8 @@ def main():
           negative=10,
           l1=0.02,
           l2=0.005)
+
+    model.dump(pathTo.fileEmbeddings, pathTo.weights)
 
 
 if __name__ == '__main__':

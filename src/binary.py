@@ -52,3 +52,24 @@ def reads(file, length):
 
 def writes(file, buffer):
     file.write(buffer)
+
+
+def dumpMatrix(path, matrix):
+    rows, columns = matrix.shape
+    values = np.asarray(matrix).flatten()
+
+    with open(path, 'wb+') as file:
+        writei(file, rows)
+        writei(file, columns)
+        writef(file, values)
+
+
+def loadMatrix(path):
+    with open(path, 'rb') as file:
+        rows = readi(file)
+        columns = readi(file)
+        count = rows * count
+        values = readf(file, count)
+        matrix = np.reshape(values, (rows, columns))
+
+        return matrix
