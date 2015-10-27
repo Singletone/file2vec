@@ -68,7 +68,7 @@ def loadMatrix(path):
     with open(path, 'rb') as file:
         rows = readi(file)
         columns = readi(file)
-        count = rows * count
+        count = rows * columns
         values = readf(file, count)
         matrix = np.reshape(values, (rows, columns))
 
