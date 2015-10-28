@@ -83,10 +83,10 @@ class Model():
 
     def dump(self, fileEmbeddingsPath, weightsPath):
         fileEmbeddings = self.fileEmbeddings.get_value()
-        bin.dumpMatrix(fileEmbeddings)
+        bin.dumpMatrix(fileEmbeddingsPath, fileEmbeddings)
 
         weights = self.weights.get_value()
-        bin.dumpMatrix(weights)
+        bin.dumpMatrix(weightsPath, weights)
 
 
     @staticmethod
@@ -181,7 +181,7 @@ def main():
     model = Model(filesCount, 200, wordEmbeddings, contextSize, negative)
 
     train(model, fileIndexMap, 200, wordIndexMap, wordEmbeddings, contexts, metricsPath,
-          epochs=20,
+          epochs=2,
           batchSize=50,
           learningRate=0.01,
           negative=10,
