@@ -1,13 +1,12 @@
 import os
 import io
-import struct
 import numpy
 
 import log
-import binary as bin
+import binary
 
 
-class IndexContextProvider():
+class IndexContextProvider:
     def __init__(self, contextsFilePath):
         self.contextsFilePath = contextsFilePath
         self.windowsCount, self.windowSize, self.negative = self.getContextsShape()
@@ -26,9 +25,9 @@ class IndexContextProvider():
 
     def getContextsShape(self):
         with open(self.contextsFilePath) as contextsFile:
-            contextsCount = bin.readi(contextsFile)
-            contextSize = bin.readi(contextsFile)
-            negative = bin.readi(contextsFile)
+            contextsCount = binary.readi(contextsFile)
+            contextSize = binary.readi(contextsFile)
+            negative = binary.readi(contextsFile)
 
             return contextsCount, contextSize, negative
 
@@ -45,7 +44,7 @@ class IndexContextProvider():
                 startPosition = start * contextBufferSize + 12
 
                 contextsFile.seek(startPosition, io.SEEK_SET)
-                contexts = bin.readi(contextsFile, contextsSize)
+                contexts = binary.readi(contextsFile, contextsSize)
 
                 contexts = numpy.reshape(contexts, (count, (self.windowSize + self.negative)))
         else:
@@ -67,14 +66,14 @@ def dumpIndexMap(indexMap, indexMapFilePath):
         indexMapSize = len(indexMap)
         itemIndex = 0
 
-        bin.writei(indexMapFile, indexMapSize)
+        binary.writei(indexMapFile, indexMapSize)
 
         for key, index in indexMap.items():
             keyLength = len(key)
 
-            bin.writei(indexMapFile, keyLength)
-            bin.writes(indexMapFile, key)
-            bin.writei(indexMapFile, index)
+            binary.writei(indexMapFile, keyLength)
+            binary.writes(indexMapFile, key)
+            binary.writei(indexMapFile, index)
 
             itemIndex += 1
             log.progress('Dumping index map: {0:.3f}%.', itemIndex, indexMapSize)
@@ -88,12 +87,12 @@ def loadIndexMap(indexMapFilePath, inverse=False):
     vocabulary = {}
 
     with open(indexMapFilePath, 'rb') as indexMapFile:
-        itemsCount = bin.readi(indexMapFile)
+        itemsCount = binary.readi(indexMapFile)
 
         for itemIndex in range(0, itemsCount):
-            wordLength = bin.readi(indexMapFile)
-            word = bin.reads(indexMapFile, wordLength)
-            index = bin.readi(indexMapFile)
+            wordLength = binary.readi(indexMapFile)
+            word = binary.reads(indexMapFile, wordLength)
+            index = binary.readi(indexMapFile)
 
             if inverse:
                 vocabulary[index] = word
@@ -115,13 +114,13 @@ def dumpEmbeddings(embeddings, embeddingsFilePath):
     embeddingsCount, embeddingSize = embeddings.shape
 
     with open(embeddingsFilePath, 'w') as embeddingsFile:
-        bin.writei(embeddingsFile, embeddingsCount)
-        bin.writei(embeddingsFile, embeddingSize)
+        binary.writei(embeddingsFile, embeddingsCount)
+        binary.writei(embeddingsFile, embeddingSize)
 
         for embeddingIndex in range(0, embeddingsCount):
             embedding = embeddings[embeddingIndex]
 
-            bin.writef(embeddingsFile, embedding)
+            binary.writef(embeddingsFile, embedding)
 
             log.progress('Dumping embeddings: {0:.3f}%.', embeddingIndex + 1, embeddingsCount)
 
@@ -130,13 +129,13 @@ def dumpEmbeddings(embeddings, embeddingsFilePath):
 
 def loadEmbeddings(embeddingsFilePath):
     with open(embeddingsFilePath, 'rb') as embeddingsFile:
-        embeddingsCount = bin.readi(embeddingsFile)
-        embeddingSize = bin.readi(embeddingsFile)
+        embeddingsCount = binary.readi(embeddingsFile)
+        embeddingSize = binary.readi(embeddingsFile)
 
         embeddings = numpy.empty((embeddingsCount, embeddingSize))
 
         for embeddingIndex in range(0, embeddingsCount):
-            embedding = bin.readf(embeddingsFile, embeddingSize)
+            embedding = binary.readf(embeddingsFile, embeddingSize)
             embeddings[embeddingIndex] = embedding
 
             log.progress('Loading embeddings: {0:.3f}%.', embeddingIndex + 1, embeddingsCount)
@@ -147,8 +146,8 @@ def loadEmbeddings(embeddingsFilePath):
 
 
 def loadW2VParameters(filePath, loadEmbeddings=True):
-    with open(filePath, 'rb') as file:
-        firstLine = file.readline()
+    with open(filePath, 'rb') as w2vFile:
+        firstLine = w2vFile.readline()
         embeddingsCount, embeddingSize = tuple(firstLine.split(' '))
         embeddingsCount, embeddingSize = int(embeddingsCount), int(embeddingSize)
         wordIndexMap = {}
@@ -160,7 +159,7 @@ def loadW2VParameters(filePath, loadEmbeddings=True):
         while True:
             word = ''
             while True:
-                char = file.read(1)
+                char = w2vFile.read(1)
 
                 if not char:
                     log.lineBreak()
@@ -178,10 +177,10 @@ def loadW2VParameters(filePath, loadEmbeddings=True):
 
             wordIndexMap[word] = len(wordIndexMap)
             if loadEmbeddings:
-                embedding = bin.readf(file, embeddingSize)
+                embedding = binary.readf(w2vFile, embeddingSize)
                 embeddings.append(embedding)
             else:
-                file.seek(embeddingSize * 4, io.SEEK_CUR)
+                w2vFile.seek(embeddingSize * 4, io.SEEK_CUR)
 
             embeddingIndex += 1
             log.progress('Loading W2V embeddings: {0:.3f}%.', embeddingIndex, embeddingsCount)

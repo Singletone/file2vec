@@ -2,7 +2,7 @@ import os
 from os.path import join
 
 
-class PathTo():
+class PathTo:
     def __init__(self, name):
         self.name = name
         self.dataDir = '../data'
@@ -32,7 +32,8 @@ class PathTo():
         self.weights = join(self.parametersDir, 'wights.bin')
 
 
-    def ensureDirectories(self, *directories):
+    @staticmethod
+    def ensureDirectories(*directories):
         for directory in directories:
             if not os.path.exists(directory):
                 os.mkdir(directory)

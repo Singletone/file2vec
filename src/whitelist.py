@@ -5,8 +5,8 @@ import os
 
 
 def getSyntacticWordRelationsWords(filePath):
-    with open(filePath, 'r') as file:
-        lines = file.readlines()
+    with open(filePath, 'r') as swrFile:
+        lines = swrFile.readlines()
         words = [tuple(line.lower().split(' ')) for line in lines if not line.startswith(':')]
         words = [(word0.strip(), word1.strip(), word2.strip(), word3.strip()) for word0, word1, word2, word3 in words]
 
@@ -25,29 +25,29 @@ def getSATWords(filePath):
 
     words = []
 
-    with open(filePath) as file:
-        line = file.readline()
+    with open(filePath) as satFile:
+        line = satFile.readline()
         while line != '':
             if len(line) < maxLineLength:
-                match = re.match('(?P<word0>[\w-]+)\s(?P<word1>[\w-]+)\s[nvar]\:[nvar]', line)
+                match = re.match('(?P<word0>[\w-]+)\s(?P<word1>[\w-]+)\s[nvar]:[nvar]', line)
                 if match:
                     stemWord0, stemWord1 = match.group('word0'), match.group('word1')
 
                     words.append(stemWord0)
                     words.append(stemWord1)
 
-                    line = file.readline()
-                    match = re.match('(?P<word0>[\w-]+)\s(?P<word1>[\w-]+)\s[nvar]\:[nvar]', line)
+                    line = satFile.readline()
+                    match = re.match('(?P<word0>[\w-]+)\s(?P<word1>[\w-]+)\s[nvar]:[nvar]', line)
                     while match:
                         choiceWord0, choiceWord1 = match.group('word0'), match.group('word1')
 
                         words.append(choiceWord0)
                         words.append(choiceWord1)
 
-                        line = file.readline()
-                        match = re.match('(?P<word0>[\w-]+)\s(?P<word1>[\w-]+)\s[nvar]\:[nvar]', line)
+                        line = satFile.readline()
+                        match = re.match('(?P<word0>[\w-]+)\s(?P<word1>[\w-]+)\s[nvar]:[nvar]', line)
 
-            line = file.readline()
+            line = satFile.readline()
 
     return words
 
@@ -76,8 +76,8 @@ def getWordSimilarity353Words(filePath):
 
 
 def getRubensteinGoodenoughWords(filePath):
-    with open(filePath) as file:
-        lines = file.readlines()
+    with open(filePath) as rgFile:
+        lines = rgFile.readlines()
 
     words = []
     for line in lines:
