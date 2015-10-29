@@ -10,8 +10,8 @@ from matplotlib import pyplot as plt
 import pandas
 
 import log
-import kit
 import vectors
+import parameters
 from libs import tsne
 
 rubensteinGoodenoughData = None
@@ -23,11 +23,9 @@ def rubensteinGoodenough(wordIndexMap, embeddings):
 
         rubensteinGoodenoughFilePath = 'res/RG/EN-RG-65.txt'
 
-        with open(rubensteinGoodenoughFilePath) as file:
-            lines = file.readlines()
+        with open(rubensteinGoodenoughFilePath) as rgFile:
+            lines = rgFile.readlines()
 
-        wordPairs = []
-        targetScores = []
         for line in lines:
             word0, word1, targetScore = tuple(line.strip().split('\t'))
             targetScore = float(targetScore)
@@ -142,8 +140,8 @@ def syntacticWordRelations(wordIndexMap, embeddings, maxWords=10):
         syntacticWordData = []
         syntWordRelFilePath = 'res/Syntactic-Word-Relations/questions-words.txt'
 
-        with open(syntWordRelFilePath, 'r') as file:
-            lines = file.readlines()
+        with open(syntWordRelFilePath, 'r') as swrFile:
+            lines = swrFile.readlines()
             syntacticWordData = [tuple(line.lower().split(' ')) for line in lines if not line.startswith(':')]
             syntacticWordData = [(word0.strip(), word1.strip(), word2.strip(), word3.strip()) for word0, word1, word2, word3 in syntacticWordData]
 
@@ -196,8 +194,8 @@ def satQuestions(wordIndexMap, embeddings):
         maxLineLength = 50
         aCode = ord('a')
 
-        with open(satQuestionsFilePath) as file:
-            line = file.readline()
+        with open(satQuestionsFilePath) as satFile:
+            line = satFile.readline()
             while line != '':
                 if len(line) < maxLineLength:
                     match = re.match('(?P<word0>[\w-]+)\s(?P<word1>[\w-]+)\s[nvar]:[nvar]', line)
@@ -205,14 +203,14 @@ def satQuestions(wordIndexMap, embeddings):
                         stemWord0, stemWord1 = match.group('word0'), match.group('word1')
                         satQuestion = [stemWord0, stemWord1]
 
-                        line = file.readline()
+                        line = satFile.readline()
                         match = re.match('(?P<word0>[\w-]+)\s(?P<word1>[\w-]+)\s[nvar]:[nvar]', line)
                         while match:
                             choiceWord0, choiceWord1 = match.group('word0'), match.group('word1')
                             satQuestion.append(choiceWord0)
                             satQuestion.append(choiceWord1)
 
-                            line = file.readline()
+                            line = satFile.readline()
                             match = re.match('(?P<word0>[\w-]+)\s(?P<word1>[\w-]+)\s[nvar]:[nvar]', line)
 
                         correctChoiceIndex = ord(line.strip()) - aCode
@@ -220,7 +218,7 @@ def satQuestions(wordIndexMap, embeddings):
 
                         satQuestionsData.append(satQuestion)
 
-                line = file.readline()
+                line = satFile.readline()
 
     scores = []
     for satQuestion in satQuestionsData:
@@ -397,7 +395,6 @@ def compareEmbeddings(indexMap, embeddingsList, comparator=None):
     embeddingIndices = numpy.arange(0, embeddingsCount)
 
     xy = [xy for xy in itertools.product(embeddingIndices, embeddingIndices)]
-    xx, yy = zip(*xy)
 
     if comparator is None:
         comparator = vectors.euclideanDistance
@@ -420,7 +417,7 @@ def compareEmbeddings(indexMap, embeddingsList, comparator=None):
 
 def main():
     embeddingsFilePath = '../data/Text8-vectors/vectors.bin'
-    wordIndexMap, embeddings = kit.loadWord2VecEmbeddings(embeddingsFilePath)
+    wordIndexMap, embeddings = parameters.loadW2VParameters(embeddingsFilePath)
 
     rgMetric = rubensteinGoodenough(wordIndexMap, embeddings)
     log.info('Rubenstein-Goodenough: {0:.2f}/10. State of the art: 9.15/10', rgMetric * 10)

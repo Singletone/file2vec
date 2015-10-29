@@ -2,7 +2,6 @@ import os
 import glob
 import time
 import re
-import struct
 import io
 import kit
 import collections
@@ -10,14 +9,14 @@ import numpy
 
 import log
 import parameters
-import binary as bin
+import binary
 
 
 class WordContextProvider:
-    def __init__(self, text=None, textFilePath=None, bufferSize=1073741824): # 1Mb as defeault buffer size
+    def __init__(self, text=None, textFilePath=None, chunkSize=1073741824): # 1Mb as defeault buffer size
         self.text = text
         self.textFile = None
-        self.bufferSize = bufferSize
+        self.chunkSize = chunkSize
 
         if textFilePath is not None:
             self.textFile = open(textFilePath)
@@ -30,19 +29,19 @@ class WordContextProvider:
 
     def next(self, contextSize):
         if self.textFile is not None:
-            buffer = self.textFile.read(self.bufferSize)
+            chunk = self.textFile.read(self.chunkSize)
         else:
-            buffer = self.text
+            chunk = self.text
 
         tail = ''
 
-        while buffer != '':
-            buffer = tail + buffer
-            buffer = re.split('\.', buffer)
+        while chunk != '':
+            chunk = tail + chunk
+            chunk = re.split('\.', chunk)
 
-            tail = buffer[-1]
+            tail = chunk[-1]
 
-            for sentence in buffer[:-1]:
+            for sentence in chunk[:-1]:
                 sentence = sentence.strip()
                 words = re.split('\s+', sentence)
 
@@ -54,12 +53,12 @@ class WordContextProvider:
             words = re.split('\s+', tail.lstrip())
 
             if self.textFile is not None:
-                buffer = self.textFile.read(self.bufferSize)
+                chunk = self.textFile.read(self.chunkSize)
             else:
-                buffer = ''
+                chunk = ''
 
-            if len(words) > contextSize * 2 - 1 or buffer == '':
-                if buffer != '':
+            if len(words) > contextSize * 2 - 1 or chunk == '':
+                if chunk != '':
                     tail = ' '.join(words[-contextSize:])
                     words = words[:-contextSize]
 
@@ -90,7 +89,7 @@ def mergeFrequencyMaps(*frequencyMaps):
     return mergedMap
 
 
-def generateNegativeSample(negative, context, wordIndexMap, wordFrequencyMap):
+def generateNegativeSample(negative, context, wordIndexMap):
     wordIndices = map(lambda item: item[1], wordIndexMap.items())
     wordIndices = [index for index in wordIndices if index != context[-1]]
     numpy.random.shuffle(wordIndices)
@@ -98,7 +97,8 @@ def generateNegativeSample(negative, context, wordIndexMap, wordFrequencyMap):
     return wordIndices[:negative]
 
 
-def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath, wordIndexMapFilePath, wordEmbeddingsFilePath, contextsPath, windowSize, negative):
+def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
+                wordIndexMapFilePath, wordEmbeddingsFilePath, contextsPath, windowSize, negative):
     if os.path.exists(contextsPath):
         os.remove(contextsPath)
 
@@ -119,11 +119,10 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
         os.remove(noNegativeSamplingPath)
 
     contextsCount = 0
-    contextsFormat = '{0}i'.format(windowSize)
     with open(noNegativeSamplingPath, 'wb+') as noNegativeSamplingFile:
-        bin.writei(noNegativeSamplingFile, 0) # this is a placeholder for contexts count
-        bin.writei(noNegativeSamplingFile, windowSize)
-        bin.writei(noNegativeSamplingFile, 0)
+        binary.writei(noNegativeSamplingFile, 0) # this is a placeholder for contexts count
+        binary.writei(noNegativeSamplingFile, windowSize)
+        binary.writei(noNegativeSamplingFile, 0)
 
         pathName = inputDirectoryPath + '/*/*.txt'
         textFilePaths = glob.glob(pathName)
@@ -156,10 +155,9 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
 
                 indexContext = [textFileIndex] + map(lambda w: wordIndexMap[w], wordContext)
 
-                bin.writei(noNegativeSamplingFile, indexContext)
+                binary.writei(noNegativeSamplingFile, indexContext)
                 contextsCount += 1
 
-            textFileName = os.path.basename(textFilePath)
             currentTime = time.time()
             elapsed = currentTime - startTime
             secondsPerFile = elapsed / (textFileIndex + 1)
@@ -175,27 +173,25 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
         log.lineBreak()
 
         noNegativeSamplingFile.seek(0, io.SEEK_SET)
-        bin.writei(noNegativeSamplingFile, contextsCount)
+        binary.writei(noNegativeSamplingFile, contextsCount)
         noNegativeSamplingFile.flush()
 
     if negative > 0:
-        contextsFormat = '{0}i'.format(windowSize + negative)
-
         with open(contextsPath, 'wb+') as contextsFile:
             startTime = time.time()
 
             contextProvider = parameters.IndexContextProvider(noNegativeSamplingPath)
 
-            bin.writei(contextsFile, contextsCount)
-            bin.writei(contextsFile, windowSize)
-            bin.writei(contextsFile, negative)
+            binary.writei(contextsFile, contextsCount)
+            binary.writei(contextsFile, windowSize)
+            binary.writei(contextsFile, negative)
 
             for contextIndex in xrange(0, contextsCount):
                 context = contextProvider[contextIndex]
-                negativeSample = generateNegativeSample(negative, context, wordIndexMap, wordFrequencyMap)
+                negativeSample = generateNegativeSample(negative, context, wordIndexMap)
                 context = numpy.concatenate([context, negativeSample])
 
-                bin.writei(contextsFile, context)
+                binary.writei(contextsFile, context)
 
                 currentTime = time.time()
                 elapsed = currentTime - startTime

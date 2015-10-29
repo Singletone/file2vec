@@ -74,11 +74,11 @@ def cleanPage(page):
 def savePage(dumpDirectoryPath, pageName, pageText):
     filePath = os.path.join(dumpDirectoryPath, pageName + '.txt')
 
-    with open(filePath, 'a+') as file:
-        if file.tell():
-            file.write(' ')
+    with open(filePath, 'a+') as pageFile:
+        if pageFile.tell():
+            pageFile.write(' ')
 
-        file.write(pageText)
+        pageFile.write(pageText)
 
 
 def unpackDump(dumpPath, cleanText):

@@ -10,7 +10,7 @@ import log
 import vectors
 import validation
 import kit
-import binary as bin
+import binary
 
 
 floatX = theano.config.floatX
@@ -18,7 +18,7 @@ empty = lambda *shape: np.empty(shape, dtype='int32')
 rnd2 = lambda d0, d1: np.random.rand(d0, d1).astype(dtype=floatX)
 
 
-class Model():
+class Model:
     def __init__(self, filesCount, fileEmbeddingSize, wordEmbeddings, contextSize, negative):
         wordsCount, wordEmbeddingSize = wordEmbeddings.shape
 
@@ -83,17 +83,17 @@ class Model():
 
     def dump(self, fileEmbeddingsPath, weightsPath):
         fileEmbeddings = self.fileEmbeddings.get_value()
-        bin.dumpMatrix(fileEmbeddings)
+        binary.dumpMatrix(fileEmbeddingsPath, fileEmbeddings)
 
         weights = self.weights.get_value()
-        bin.dumpMatrix(weights)
+        binary.dumpMatrix(weightsPath, weights)
 
 
     @staticmethod
     def load(fileEmbeddingsPath, wordEmbeddingsPath, weightsPath):
-        fileEmbeddings = bin.loadMatrix(fileEmbeddingsPath)
-        wordEmbeddings = bin.loadMatrix(wordEmbeddingsPath)
-        weights = bin.loadMatrix(weightsPath)
+        fileEmbeddings = binary.loadMatrix(fileEmbeddingsPath)
+        wordEmbeddings = binary.loadMatrix(wordEmbeddingsPath)
+        weights = binary.loadMatrix(weightsPath)
 
         filesCount, fileEmbeddingSize = fileEmbeddings.shape
         wordsCount, wordEmbeddingSize = wordEmbeddings.shape
@@ -105,7 +105,7 @@ class Model():
 
 
 
-def train(model, fileIndexMap, fileEmbeddingSize, wordIndexMap, wordEmbeddings, contexts, metricsPath,
+def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPath,
           epochs, batchSize, learningRate, negative, l1, l2):
     model.trainingContexts.set_value(contexts)
 
@@ -180,7 +180,7 @@ def main():
 
     model = Model(filesCount, 200, wordEmbeddings, contextSize, negative)
 
-    train(model, fileIndexMap, 200, wordIndexMap, wordEmbeddings, contexts, metricsPath,
+    train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPath,
           epochs=20,
           batchSize=50,
           learningRate=0.01,
