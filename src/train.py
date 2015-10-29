@@ -19,12 +19,20 @@ rnd2 = lambda d0, d1: np.random.rand(d0, d1).astype(dtype=floatX)
 
 
 class Model:
-    def __init__(self, filesCount, fileEmbeddingSize, wordEmbeddings, contextSize, negative):
+    def __init__(self, fileEmbeddings, wordEmbeddings, weights=None, contextSize=None, negative=None):
+        filesCount, fileEmbeddingSize = fileEmbeddings.shape
         wordsCount, wordEmbeddingSize = wordEmbeddings.shape
 
-        self.fileEmbeddings = theano.shared(rnd2(filesCount, fileEmbeddingSize), 'fileEmbeddings', borrow=True)
+        if weights is not None:
+            featuresCount, activationsCount = weights.shape
+            contextSize = (featuresCount - fileEmbeddingSize) / wordEmbeddingSize
+            negative = activationsCount - 1
+        else:
+            weights = rnd2(fileEmbeddingSize + contextSize * wordEmbeddingSize, wordsCount)
+
+        self.fileEmbeddings = theano.shared(fileEmbeddings, 'fileEmbeddings', borrow=True)
         self.wordEmbeddings = theano.shared(wordEmbeddings, 'wordEmbeddings', borrow=True)
-        self.weights = theano.shared(rnd2(fileEmbeddingSize + contextSize * wordEmbeddingSize, wordsCount), 'weights', borrow=True)
+        self.weights = theano.shared(weights, 'weights', borrow=True)
 
         fileIndicesOffset = 0
         wordIndicesOffset = fileIndicesOffset + 1
@@ -46,37 +54,38 @@ class Model:
         probabilities = T.batched_dot(features, subWeights)
 
         parameters = [self.fileEmbeddings, self.weights]
+        subParameters = [files, None]
 
         l1Coefficient = T.scalar('l1Coefficient', dtype=floatX)
         l2Coefficient = T.scalar('l2Coefficient', dtype=floatX)
 
-        l1Regularization = l1Coefficient * sum([abs(p).sum() for p in parameters])
-        l2Regularization = l2Coefficient * sum([(p ** 2).sum() for p in parameters])
+        l1 = l1Coefficient * sum([abs(p).sum() for p in parameters])
+        l2 = l2Coefficient * sum([(p ** 2).sum() for p in parameters])
 
-        cost = -T.mean(T.log(T.exp(probabilities[:,0])) + T.sum(T.log(T.exp(-probabilities[:,1:])), axis=1)) + \
-               l1Regularization + l2Regularization
+        cost = -T.mean(T.log(T.exp(probabilities[:,0])) + T.sum(T.log(T.exp(-probabilities[:,1:])), axis=1)) + l1 + l2
 
-        lr = T.scalar('learningRate', dtype=floatX)
+        learningRate = T.scalar('learningRate', dtype=floatX)
 
-        parameters = [self.fileEmbeddings]
-        subParameters = [files]
-        gradients = [T.grad(cost, wrt=subP) for subP in subParameters]
-        updates = [(p, T.inc_subtensor(subP, -lr * g)) for p, subP, g in zip(parameters, subParameters, gradients)]
-
-        parameters = [self.weights]
-        gradients = [T.grad(cost, wrt=p) for p in parameters]
-        updates = updates + [(p, p - lr * g) for p, g in zip(parameters, gradients)]
+        updates = []
+        for p, subP in zip(parameters, subParameters):
+            if subP is not None:
+                gradient = T.grad(cost, wrt=subP)
+                update = (p, T.inc_subtensor(subP, -learningRate * gradient))
+            else:
+                gradient = T.grad(cost, wrt=p)
+                update = (p, p - learningRate * gradient)
+            updates.append(update)
 
         batchIndex = T.iscalar('batchIndex')
-        bs = T.iscalar('batchSize')
+        batchSize = T.iscalar('batchSize')
         self.trainingContexts = theano.shared(empty(1,1), 'trainingContexts', borrow=True)
 
         self.trainModel = theano.function(
-            inputs=[batchIndex, bs, lr, l1Coefficient, l2Coefficient],
+            inputs=[batchIndex, batchSize, learningRate, l1Coefficient, l2Coefficient],
             outputs=cost,
             updates=updates,
             givens={
-                contexts: self.trainingContexts[batchIndex * bs : (batchIndex + 1) * bs]
+                contexts: self.trainingContexts[batchIndex * batchSize : (batchIndex + 1) * batchSize]
             }
         )
 
@@ -106,13 +115,14 @@ class Model:
 
 
 def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPath,
-          epochs, batchSize, learningRate, negative, l1, l2):
+          epochs, batchSize, learningRate, l1, l2):
     model.trainingContexts.set_value(contexts)
 
-    startTime = time.time()
-    contextsCount = contexts.shape[0]
+    contextsCount, contextSize = contexts.shape
+
     batchesCount = contextsCount / batchSize + int(contextsCount % batchSize > 0)
 
+    startTime = time.time()
     for epoch in xrange(0, epochs):
         for batchIndex in xrange(0, batchesCount):
             error = model.trainModel(batchIndex, batchSize, learningRate, l1, l2)
@@ -152,6 +162,7 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPa
 
     validation.compareEmbeddings(fileIndexMap, model.fileEmbeddings.get_value())
     # validation.plotEmbeddings(fileIndexMap, model.fileEmbeddings.get_value())
+    # validation.compareMetrics(metricsPath, 'error')
 
 
 def main():
@@ -159,8 +170,8 @@ def main():
 
     fileIndexMap = parameters.loadIndexMap(pathTo.fileIndexMap)
     filesCount = len(fileIndexMap)
+    fileEmbeddingSize = 200
     wordIndexMap = parameters.loadIndexMap(pathTo.wordIndexMap)
-    indexWordMap = parameters.loadIndexMap(pathTo.wordIndexMap, inverse=True)
     wordEmbeddings = parameters.loadEmbeddings(pathTo.wordEmbeddings)
     metricsPath = pathTo.metrics('history.csv')
 
@@ -178,13 +189,13 @@ def main():
              contextProvider.windowSize,
              contextProvider.negative)
 
-    model = Model(filesCount, 200, wordEmbeddings, contextSize, negative)
+    fileEmbeddings = rnd2(filesCount, fileEmbeddingSize)
+    model = Model(fileEmbeddings, wordEmbeddings, contextSize=contextSize, negative=negative)
 
     train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPath,
-          epochs=20,
+          epochs=50,
           batchSize=50,
           learningRate=0.01,
-          negative=10,
           l1=0.02,
           l2=0.005)
 

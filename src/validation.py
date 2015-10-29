@@ -382,7 +382,7 @@ def mapEmbeddings2LowDim(indexMap, embeddingsList):
         axis.scatter(lowDimEmbeddingsX, lowDimEmbeddingsY, 20, labels)
 
         for index, fileName in enumerate(fileNames):
-            axis.annotate(fileName, (lowDimEmbeddingsX[index],lowDimEmbeddingsY[index]))
+            axis.annotate(fileName, (lowDimEmbeddingsX[index], lowDimEmbeddingsY[index]))
 
     figureManager = plt.get_current_fig_manager()
     figureManager.resize(*figureManager.window.maxsize())
@@ -390,11 +390,12 @@ def mapEmbeddings2LowDim(indexMap, embeddingsList):
     plt.show()
 
 
-def compareEmbeddings(indexMap, embeddingsList, comparator=None):
+def compareEmbeddings(indexMap, embeddingsList, comparator=None, annotate=False):
     embeddingsCount = len(indexMap)
     embeddingIndices = numpy.arange(0, embeddingsCount)
 
     xy = [xy for xy in itertools.product(embeddingIndices, embeddingIndices)]
+    xx, yy = zip(*xy)
 
     if comparator is None:
         comparator = vectors.euclideanDistance
@@ -412,6 +413,12 @@ def compareEmbeddings(indexMap, embeddingsList, comparator=None):
     plt.yticks(indices, fileNames, size='small')
 
     plt.contourf(comparisons)
+
+    if annotate:
+        for x, y, c in zip(xx, yy, comparisons.flatten()):
+            c = '{0:.1f}'.format(c)
+            plt.annotate(c, (x, y))
+
     plt.show()
 
 
