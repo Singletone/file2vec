@@ -82,7 +82,7 @@ class Model:
 
         self.trainModel = theano.function(
             inputs=[batchIndex, batchSize, learningRate, l1Coefficient, l2Coefficient],
-            outputs=cost,
+            outputs=[cost, learningRate],
             updates=updates,
             givens={
                 contexts: self.trainingContexts[batchIndex * batchSize : (batchIndex + 1) * batchSize]
@@ -125,21 +125,14 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPa
     startTime = time.time()
     for epoch in xrange(0, epochs):
         for batchIndex in xrange(0, batchesCount):
-            error = model.trainModel(batchIndex, batchSize, learningRate, l1, l2)
+            error, alpha = model.trainModel(batchIndex, batchSize, learningRate, l1, l2)
+            error, alpha = float(error), float(alpha)
             if error <= 0:
                 break
 
-        fe = model.fileEmbeddings.get_value()
-        we = lambda key: fe[fileIndexMap['../data/Duplicates/Prepared/duplicates/{0}.txt'.format(key)]]
-        distance = lambda left, right: vectors.euclideanDistance(we(left), we(right))
-
         metrics = {
-            'tanks': distance('tank_0', 'tank_1'),
-            'alexes': distance('alex_0', 'alex_1'),
-            'tankAlex': distance('tank_0', 'alex_0'),
-            'carAlex': distance('car_0', 'alex_0'),
-            'spiderNasa': distance('spider_0', 'nasa_0'),
-            'error': error
+            'error': error,
+            'alpha': alpha
         }
 
         validation.dump(metricsPath, epoch, metrics)
@@ -147,22 +140,19 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPa
         elapsed = time.time() - startTime
         secondsPerEpoch = elapsed / (epoch + 1)
 
-        log.progress('Training model: {0:.3f}%. {1:.3f} sec per epoch. Error: {2:.3f}. Spiders={3:.3f}. Alexes={4:.3f}. Tank/Alex={5:.3f}. Car/Alex={6:.3f}. Spider/Nasa={7:.3f}.',
-                     epoch + 1, epochs,
+        log.progress('Training model: {0:.3f}%. {1:.3f} sec per epoch. Error: {2:.3f}. Alpha: {3:.3f}',
+                     epoch + 1,
+                     epochs,
                      secondsPerEpoch,
-                     float(error),
-                     metrics['tanks'],
-                     metrics['alexes'],
-                     metrics['tankAlex'],
-                     metrics['carAlex'],
-                     metrics['spiderNasa'])
+                     error,
+                     alpha)
 
         if error <= 0:
             break
 
-    validation.compareEmbeddings(fileIndexMap, model.fileEmbeddings.get_value())
+    # validation.compareEmbeddings(fileIndexMap, model.fileEmbeddings.get_value())
     # validation.plotEmbeddings(fileIndexMap, model.fileEmbeddings.get_value())
-    # validation.compareMetrics(metricsPath, 'error')
+    validation.compareMetrics(metricsPath, 'error')
 
 
 def main():

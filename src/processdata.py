@@ -124,7 +124,7 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
         binary.writei(noNegativeSamplingFile, windowSize)
         binary.writei(noNegativeSamplingFile, 0)
 
-        pathName = inputDirectoryPath + '/*/*.txt'
+        pathName = inputDirectoryPath + '/*.txt'
         textFilePaths = glob.glob(pathName)
         textFilePaths = sorted(textFilePaths)
         textFileCount = len(textFilePaths)
