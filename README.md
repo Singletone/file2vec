@@ -7,7 +7,7 @@ can be launched on both CPU and GPU.
 All functionality is splitted into controllers, infrustructure and learning.
 
 ##Controllers
-implement different stages of data processing. They can be launched
+Implement different stages of data processing. They can be launched
 either from command line or from python. When launced from a command line
 each controller acts more like a standalone tool with it's own arguments
 that will save work results to HDD. But these controllers also provide a bunch
@@ -33,7 +33,8 @@ a set of name/text pairs with all wiki markup specific noise removed.
 Currently, the connectors for the following datasets are available:
 - [Wikipedia](http://kopiwiki.dsd.sztaki.hu/);
 - [Rotten Tomatos](https://www.kaggle.com/c/sentiment-analysis-on-movie-reviews);
-- [Large Movie Review Dataset v1.0](http://ai.stanford.edu/~amaas/data/sentiment/).
+- [Large Movie Review Dataset v1.0](http://ai.stanford.edu/~amaas/data/sentiment/);
+- plain text files.
 
 ###Processing
 The main goal of processing is to subsample the most frequent words, prune least unique ones,
