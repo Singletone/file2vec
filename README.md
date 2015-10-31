@@ -42,10 +42,10 @@ Injection → Processing → Training
 ###Injection
 On this stage data may be collected from a number of datasets using dataset connectors.
 Each connector is a generator that provides access to the name/text pairs stored in a
-dataset. No text transformations are applied on this stage except only dataset cpecific ones.
-Thus, for instance, when injecting Wikipedia dataset all gzipped wiki dump is unpacked into
+dataset. No text transformations are applied on this stage except only dataset specific ones.
+Thus, for instance, when injecting Wikipedia dataset all gzipped wiki dumps are unpacked into
 a set of name/text pairs with all wiki markup specific noise removed.
-Currently, the connectors for the following datasets are available:
+Currently, connectors for the following datasets are available:
 - [Wikipedia](http://kopiwiki.dsd.sztaki.hu/);
 - [Rotten Tomatos](https://www.kaggle.com/c/sentiment-analysis-on-movie-reviews);
 - [Large Movie Review Dataset v1.0](http://ai.stanford.edu/~amaas/data/sentiment/);
