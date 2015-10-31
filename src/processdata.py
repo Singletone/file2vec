@@ -212,14 +212,14 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
 
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('Duplicates')
+    pathTo = kit.PathTo('Cockatoo-min')
 
     processData(
         inputDirectoryPath = pathTo.preparedDir,
-        w2vEmbeddingsFilePath = pathTo.w2vEmbeddings('wiki_full_s200_w10_mc20_hs1.bin'),
+        w2vEmbeddingsFilePath = pathTo.w2vEmbeddings('wiki_full_s800_w10_mc20_hs1.bin'),
         fileIndexMapFilePath = pathTo.fileIndexMap,
         wordIndexMapFilePath = pathTo.wordIndexMap,
         wordEmbeddingsFilePath = pathTo.wordEmbeddings,
         contextsPath = pathTo.contexts,
-        windowSize = 8,
+        windowSize = 10,
         negative = 10)

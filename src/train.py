@@ -7,10 +7,10 @@ import theano.tensor as T
 
 import parameters
 import log
-import vectors
 import validation
 import kit
 import binary
+import vectors
 
 
 floatX = theano.config.floatX
@@ -74,6 +74,7 @@ class Model:
             else:
                 gradient = T.grad(cost, wrt=p)
                 update = (p, p - learningRate * gradient)
+
             updates.append(update)
 
         batchIndex = T.iscalar('batchIndex')
@@ -82,7 +83,7 @@ class Model:
 
         self.trainModel = theano.function(
             inputs=[batchIndex, batchSize, learningRate, l1Coefficient, l2Coefficient],
-            outputs=[cost, learningRate],
+            outputs=cost,
             updates=updates,
             givens={
                 contexts: self.trainingContexts[batchIndex * batchSize : (batchIndex + 1) * batchSize]
@@ -123,44 +124,51 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPa
     batchesCount = contextsCount / batchSize + int(contextsCount % batchSize > 0)
 
     startTime = time.time()
+    errors = []
     for epoch in xrange(0, epochs):
         for batchIndex in xrange(0, batchesCount):
-            error, alpha = model.trainModel(batchIndex, batchSize, learningRate, l1, l2)
-            error, alpha = float(error), float(alpha)
+            error = model.trainModel(batchIndex, batchSize, learningRate, l1, l2)
+
+            error = float(error)
+            errors.append(error)
+
+            if len(errors) > 1:
+                learningRate = learningRate * error / errors[-2]
+
             if error <= 0:
                 break
 
-        metrics = {
-            'error': error,
-            'alpha': alpha
-        }
+            elapsed = time.time() - startTime
 
-        validation.dump(metricsPath, epoch, metrics)
+            log.progress('Training model: {0:.3f}%. Epoch: {1}. Elapsed: {2}. Error: {3:.3f}. Learning rate: {4:.3f}.',
+                         epoch * batchesCount + batchIndex + 1,
+                         epochs * batchesCount,
+                         epoch + 1,
+                         log.delta(elapsed),
+                         error,
+                         learningRate)
 
-        elapsed = time.time() - startTime
-        secondsPerEpoch = elapsed / (epoch + 1)
+            metrics = {
+                'error': error,
+                'learningRate': learningRate
+            }
 
-        log.progress('Training model: {0:.3f}%. {1:.3f} sec per epoch. Error: {2:.3f}. Alpha: {3:.3f}',
-                     epoch + 1,
-                     epochs,
-                     secondsPerEpoch,
-                     error,
-                     alpha)
+            validation.dump(metricsPath, epoch, metrics)
 
         if error <= 0:
             break
 
-    # validation.compareEmbeddings(fileIndexMap, model.fileEmbeddings.get_value())
+    validation.compareEmbeddings(fileIndexMap, model.fileEmbeddings.get_value(), comparator=vectors.cosineSimilarity, annotate=True)
     # validation.plotEmbeddings(fileIndexMap, model.fileEmbeddings.get_value())
     validation.compareMetrics(metricsPath, 'error')
 
 
 def main():
-    pathTo = kit.PathTo('Duplicates')
+    pathTo = kit.PathTo('Cockatoo-min')
 
     fileIndexMap = parameters.loadIndexMap(pathTo.fileIndexMap)
     filesCount = len(fileIndexMap)
-    fileEmbeddingSize = 200
+    fileEmbeddingSize = 2000
     wordIndexMap = parameters.loadIndexMap(pathTo.wordIndexMap)
     wordEmbeddings = parameters.loadEmbeddings(pathTo.wordEmbeddings)
     metricsPath = pathTo.metrics('history.csv')
@@ -183,9 +191,9 @@ def main():
     model = Model(fileEmbeddings, wordEmbeddings, contextSize=contextSize, negative=negative)
 
     train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPath,
-          epochs=50,
+          epochs=10,
           batchSize=50,
-          learningRate=0.01,
+          learningRate=0.02,
           l1=0.02,
           l2=0.005)
 
