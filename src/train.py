@@ -62,7 +62,8 @@ class Model:
         l1 = l1Coefficient * sum([abs(p).sum() for p in parameters])
         l2 = l2Coefficient * sum([(p ** 2).sum() for p in parameters])
 
-        cost = -T.mean(T.log(T.exp(probabilities[:,0])) + T.sum(T.log(T.exp(-probabilities[:,1:])), axis=1)) + l1 + l2
+        # cost = -T.mean(T.log(T.exp(probabilities[:,0])) + T.sum(T.log(T.exp(-probabilities[:,1:])), axis=1)) + l1 + l2
+        cost = -T.mean(T.log(T.nnet.sigmoid(probabilities[:,0])) + T.sum(T.log(T.nnet.sigmoid(-probabilities[:,1:])), axis=1))
 
         learningRate = T.scalar('learningRate', dtype=floatX)
 
@@ -82,7 +83,7 @@ class Model:
         self.trainingContexts = theano.shared(empty(1,1), 'trainingContexts', borrow=True)
 
         self.trainModel = theano.function(
-            inputs=[batchIndex, batchSize, learningRate, l1Coefficient, l2Coefficient],
+            inputs=[batchIndex, batchSize, learningRate],
             outputs=cost,
             updates=updates,
             givens={
@@ -127,7 +128,7 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPa
     errors = []
     for epoch in xrange(0, epochs):
         for batchIndex in xrange(0, batchesCount):
-            error = model.trainModel(batchIndex, batchSize, learningRate, l1, l2)
+            error = model.trainModel(batchIndex, batchSize, learningRate)
 
             error = float(error)
             errors.append(error)
@@ -159,16 +160,16 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPa
             break
 
     validation.compareEmbeddings(fileIndexMap, model.fileEmbeddings.get_value(), comparator=vectors.cosineSimilarity, annotate=True)
-    # validation.plotEmbeddings(fileIndexMap, model.fileEmbeddings.get_value())
+    validation.plotEmbeddings(fileIndexMap, model.fileEmbeddings.get_value())
     validation.compareMetrics(metricsPath, 'error')
 
 
 def main():
-    pathTo = kit.PathTo('Cockatoo-min')
+    pathTo = kit.PathTo('Cockatoo')
 
     fileIndexMap = parameters.loadIndexMap(pathTo.fileIndexMap)
     filesCount = len(fileIndexMap)
-    fileEmbeddingSize = 2000
+    fileEmbeddingSize = 800
     wordIndexMap = parameters.loadIndexMap(pathTo.wordIndexMap)
     wordEmbeddings = parameters.loadEmbeddings(pathTo.wordEmbeddings)
     metricsPath = pathTo.metrics('history.csv')
@@ -192,10 +193,10 @@ def main():
 
     train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPath,
           epochs=10,
-          batchSize=50,
-          learningRate=0.02,
-          l1=0.02,
-          l2=0.005)
+          batchSize=100,
+          learningRate=0.03,
+          l1=0,
+          l2=0)
 
     model.dump(pathTo.fileEmbeddings, pathTo.weights)
 

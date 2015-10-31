@@ -6,6 +6,7 @@ import io
 import kit
 import collections
 import numpy
+import math
 
 import log
 import parameters
@@ -97,6 +98,23 @@ def generateNegativeSample(negative, context, wordIndexMap):
     return wordIndices[:negative]
 
 
+def subsampleFrequentWords(text, wordFrequencyMap):
+    sentences = text.split('.')
+    sentences = [sentence.strip().split(' ') for sentence in sentences if sentence != '']
+
+    threshold = 1e1
+    rnd = numpy.random.rand
+    pruned = []
+    for sentence in sentences:
+        sentence = [word for word in sentence if word in wordFrequencyMap and rnd() > (1 - math.sqrt(threshold/wordFrequencyMap[word]))]
+        sentence = ' '.join(sentence)
+        pruned.append(sentence)
+
+    pruned = '. '.join(pruned)
+
+    return pruned
+
+
 def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
                 wordIndexMapFilePath, wordEmbeddingsFilePath, contextsPath, windowSize, negative):
     if os.path.exists(contextsPath):
@@ -109,7 +127,6 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
     wordIndexMap = collections.OrderedDict()
     wordFrequencyMap = collections.OrderedDict()
     wordEmbeddings = []
-    w2vWordIndexMap, w2vEmbeddings = parameters.loadW2VParameters(w2vEmbeddingsFilePath)
 
     noNegativeSamplingPath = contextsPath
     if negative > 0:
@@ -118,16 +135,41 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
     if os.path.exists(noNegativeSamplingPath):
         os.remove(noNegativeSamplingPath)
 
+    pathName = inputDirectoryPath + '/*.txt'
+    textFilePaths = glob.glob(pathName)
+    textFilePaths = sorted(textFilePaths)
+    textFileCount = len(textFilePaths)
+
+    # for textFileIndex, textFilePath in enumerate(textFilePaths):
+    #     fileIndexMap[textFilePath] = textFileIndex
+    #
+    #     currentSentence = None
+    #     contextProvider = WordContextProvider(textFilePath=textFilePath)
+    #     for sentence, wordContext in contextProvider.next(wordContextSize):
+    #         if currentSentence != sentence:
+    #             currentSentence = sentence
+    #             frequencies = getWordFrequencyMap(currentSentence)
+    #             wordFrequencyMap = mergeFrequencyMaps(wordFrequencyMap, frequencies)
+    #
+    # wordFrequencyMap = sorted(wordFrequencyMap.items(), key=lambda item: item[1], reverse=True)
+    # wordFrequencyMap = collections.OrderedDict(wordFrequencyMap)
+    #
+    # for textFilePath, textFileIndex in fileIndexMap.items():
+    #     with open(textFilePath, 'r') as textFile:
+    #         text = textFile.read()
+    #         text = subsampleFrequentWords(text, wordFrequencyMap)
+    #
+    #     with open(textFilePath, 'w+') as textFile:
+    #         textFile.write(text)
+
+    w2vWordIndexMap, w2vEmbeddings = parameters.loadW2VParameters(w2vEmbeddingsFilePath)
+
     contextsCount = 0
     with open(noNegativeSamplingPath, 'wb+') as noNegativeSamplingFile:
         binary.writei(noNegativeSamplingFile, 0) # this is a placeholder for contexts count
         binary.writei(noNegativeSamplingFile, windowSize)
         binary.writei(noNegativeSamplingFile, 0)
 
-        pathName = inputDirectoryPath + '/*.txt'
-        textFilePaths = glob.glob(pathName)
-        textFilePaths = sorted(textFilePaths)
-        textFileCount = len(textFilePaths)
         startTime = time.time()
 
         for textFileIndex, textFilePath in enumerate(textFilePaths):
@@ -212,7 +254,7 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
 
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('Cockatoo-min')
+    pathTo = kit.PathTo('Cockatoo')
 
     processData(
         inputDirectoryPath = pathTo.preparedDir,

@@ -57,7 +57,7 @@ def extractConnectors(outputDirectoryPath, outputConcatFilePath, *connectors):
 
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('Cockatoo-min')
+    pathTo = kit.PathTo('Cockatoo')
 
     wikiConnector = connectors.WikipediaSourceConnector(pathTo.dataSetDir)
 

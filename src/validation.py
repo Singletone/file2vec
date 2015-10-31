@@ -401,6 +401,7 @@ def compareEmbeddings(indexMap, embeddingsList, comparator=None, annotate=False)
         comparator = vectors.euclideanDistance
 
     comparisons = [comparator(embeddingsList[x], embeddingsList[y]) for x, y in xy]
+    comparisons = [numpy.nan if c == 1 else c for c in comparisons]
     comparisons = numpy.reshape(comparisons, (embeddingsCount, embeddingsCount))
 
     plt.subplot(111)
