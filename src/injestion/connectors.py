@@ -1,1 +1,2 @@
-__author__ = 'best'
+class TextFilesConnector:
+    pass
