@@ -39,9 +39,9 @@ But these controllers also provide a bunch of tools to process data in-memory.
 Generally data goes through the following pipeline:
 Injection → Processing → Training
 
-###Injection
+###Extraction
 On this stage data may be collected from a number of datasets using dataset connectors.
-Each connector is a generator that provides access to the name/text pairs stored in a
+Each connector is an iterator that provides access to the name/text pairs stored in a
 dataset. No text transformations are applied on this stage except only dataset specific ones.
 Thus, for instance, when injecting Wikipedia dataset all gzipped wiki dumps are unpacked into
 a set of name/text pairs with all wiki markup specific noise removed.
