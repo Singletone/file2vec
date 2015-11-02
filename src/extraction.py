@@ -73,7 +73,7 @@ def extract(outputDirectoryPath, outputConcatFilePath, connector):
         elapsed = currentTime - startTime
         pagesCount += 1
 
-        log.progress('Extracting connectors: {0:.3f}%. Elapsed: {1}. Pages: {2}.',
+        log.progress('Extracting text containers: {0:.3f}%. Elapsed: {1}. Pages: {2}.',
                      textContainerIndex + 1,
                      textContainersCount,
                      log.delta(elapsed),
@@ -82,9 +82,11 @@ def extract(outputDirectoryPath, outputConcatFilePath, connector):
     log.lineBreak()
 
 
+def launch(pathTo):
+    connector = connectors.TextFilesConnector(pathTo.dataSetDir)
+    extract(pathTo.extractedDir, pathTo.concatenated, connector)
+
+
 if __name__ == '__main__':
     pathTo = kit.PathTo('Cockatoo')
-
-    connector = connectors.TextFilesConnector(pathTo.dataSetDir)
-
-    extract(pathTo.extractedDir, pathTo.concatenated, connector)
+    launch(pathTo)

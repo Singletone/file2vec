@@ -174,7 +174,7 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
                 currentTime = time.time()
                 elapsed = currentTime - startTime
 
-                log.progress('Random sampling: {0:.3f}%. Elapsed: {1}.',
+                log.progress('Negative sampling: {0:.3f}%. Elapsed: {1}.',
                      contextIndex + 1,
                      contextsCount,
                      log.delta(elapsed))
@@ -189,9 +189,7 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
     parameters.dumpEmbeddings(wordEmbeddings, wordEmbeddingsFilePath)
 
 
-if __name__ == '__main__':
-    pathTo = kit.PathTo('Cockatoo')
-
+def launch(pathTo):
     processData(
         inputDirectoryPath = pathTo.weededDir,
         w2vEmbeddingsFilePath = pathTo.w2vEmbeddings('wiki_full_s200_w10_mc20_hs1.bin'),
@@ -201,3 +199,8 @@ if __name__ == '__main__':
         contextsPath = pathTo.contexts,
         windowSize = 10,
         negative = 10)
+
+
+if __name__ == '__main__':
+    pathTo = kit.PathTo('Cockatoo')
+    launch(pathTo)

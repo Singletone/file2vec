@@ -92,17 +92,20 @@ def weed(inputDirectoryPath, outputDirectoryPath, sample, minCount):
             with open(weededFilePath, 'w+') as weededFile:
                 weededFile.write(text)
 
-        log.progress('Weeding: {0:.3f}.', textFileIndex + 1, textFilesCount)
+        log.progress('Pruning and subsampling: {0:.3f}.', textFileIndex + 1, textFilesCount)
 
     log.lineBreak()
 
 
-if __name__ == '__main__':
-    pathTo = kit.PathTo('Cockatoo')
-
+def launch(pathTo):
     weed(
         inputDirectoryPath = pathTo.extractedDir,
         outputDirectoryPath = pathTo.weededDir,
         sample = 1e1,
         minCount = 5
     )
+
+if __name__ == '__main__':
+    pathTo = kit.PathTo('Cockatoo')
+    launch(pathTo)
+

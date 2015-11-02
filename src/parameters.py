@@ -153,8 +153,6 @@ def loadW2VParameters(filePath, loadEmbeddings=True):
         wordIndexMap = {}
         embeddings = numpy.zeros((embeddingsCount, embeddingSize))
 
-        log.info('Words count: {0}. Embedding size: {1}.', embeddingsCount, embeddingSize)
-
         embeddingIndex = 0
         while True:
             word = ''
@@ -183,4 +181,8 @@ def loadW2VParameters(filePath, loadEmbeddings=True):
                 w2vFile.seek(embeddingSize * 4, io.SEEK_CUR)
 
             embeddingIndex += 1
-            log.progress('Loading W2V embeddings: {0:.3f}%.', embeddingIndex, embeddingsCount)
+            log.progress('Loading W2V embeddings: {0:.3f}%. {1} embeddings {2} features each.',
+                         embeddingIndex,
+                         embeddingsCount,
+                         embeddingsCount,
+                         embeddingSize)
