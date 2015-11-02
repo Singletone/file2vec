@@ -102,7 +102,7 @@ def launch(pathTo):
         inputDirectoryPath = pathTo.extractedDir,
         outputDirectoryPath = pathTo.weededDir,
         sample = 1e1,
-        minCount = 5
+        minCount = 1
     )
 
 if __name__ == '__main__':

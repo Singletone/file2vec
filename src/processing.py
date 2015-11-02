@@ -192,7 +192,7 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
 def launch(pathTo):
     processData(
         inputDirectoryPath = pathTo.weededDir,
-        w2vEmbeddingsFilePath = pathTo.w2vEmbeddings('wiki_full_s200_w10_mc20_hs1.bin'),
+        w2vEmbeddingsFilePath = pathTo.w2vEmbeddings('wiki_full_s300_w10_mc20_hs1.bin'),
         fileIndexMapFilePath = pathTo.fileIndexMap,
         wordIndexMapFilePath = pathTo.wordIndexMap,
         wordEmbeddingsFilePath = pathTo.wordEmbeddings,

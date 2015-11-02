@@ -1,6 +1,7 @@
 import numpy as np
 import time
 import os
+import math
 
 import theano
 import theano.tensor as T
@@ -10,7 +11,6 @@ import log
 import validation
 import kit
 import binary
-import vectors
 
 
 floatX = theano.config.floatX
@@ -56,13 +56,6 @@ class Model:
         parameters = [self.fileEmbeddings, self.weights]
         subParameters = [files, None]
 
-        l1Coefficient = T.scalar('l1Coefficient', dtype=floatX)
-        l2Coefficient = T.scalar('l2Coefficient', dtype=floatX)
-
-        l1 = l1Coefficient * sum([abs(p).sum() for p in parameters])
-        l2 = l2Coefficient * sum([(p ** 2).sum() for p in parameters])
-
-        # cost = -T.mean(T.log(T.exp(probabilities[:,0])) + T.sum(T.log(T.exp(-probabilities[:,1:])), axis=1)) + l1 + l2
         cost = -T.mean(T.log(T.nnet.sigmoid(probabilities[:,0])) + T.sum(T.log(T.nnet.sigmoid(-probabilities[:,1:])), axis=1))
 
         learningRate = T.scalar('learningRate', dtype=floatX)
@@ -117,7 +110,7 @@ class Model:
 
 
 def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPath,
-          epochs, batchSize, learningRate, l1, l2):
+          epochs, batchSize, learningRate):
     model.trainingContexts.set_value(contexts)
 
     contextsCount, contextSize = contexts.shape
@@ -127,49 +120,48 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPa
     startTime = time.time()
     errors = []
     for epoch in xrange(0, epochs):
+        error = 0
         for batchIndex in xrange(0, batchesCount):
-            error = model.trainModel(batchIndex, batchSize, learningRate)
+            error += model.trainModel(batchIndex, batchSize, learningRate)
 
-            error = float(error)
-            errors.append(error)
+        error = error / batchesCount
+        errors.append(error)
 
-            if len(errors) > 1:
-                learningRate = learningRate * error / errors[-2]
-
-            if error <= 0:
-                break
-
-            elapsed = time.time() - startTime
-
-            log.progress('Training model: {0:.3f}%. Epoch: {1}. Elapsed: {2}. Error: {3:.3f}. Learning rate: {4:.3f}.',
-                         epoch * batchesCount + batchIndex + 1,
-                         epochs * batchesCount,
-                         epoch + 1,
-                         log.delta(elapsed),
-                         error,
-                         learningRate)
-
-            metrics = {
-                'error': error,
-                'learningRate': learningRate
-            }
-
-            validation.dump(metricsPath, epoch, metrics)
+        # if len(errors) > 1:
+        #     learningRate = learningRate * (1 - 0.2 * error / errors[-2])
 
         if error <= 0:
             break
 
-    validation.compareEmbeddings(fileIndexMap, model.fileEmbeddings.get_value(), comparator=vectors.cosineSimilarity, annotate=True)
+        elapsed = time.time() - startTime
+
+        log.progress('Training model: {0:.3f}%. Epoch: {1}. Elapsed: {2}. Error: {3:.3f}. Learning rate: {4}.',
+                     epoch + 1,
+                     epochs,
+                     epoch + 1,
+                     log.delta(elapsed),
+                     error,
+                     learningRate)
+
+        metrics = {
+            'error': error,
+            'learningRate': learningRate
+        }
+
+        validation.dump(metricsPath, epoch, metrics)
+
+        if error <= 0:
+            break
+
+    validation.compareEmbeddings(fileIndexMap, model.fileEmbeddings.get_value(), annotate=True)
     validation.plotEmbeddings(fileIndexMap, model.fileEmbeddings.get_value())
     validation.compareMetrics(metricsPath, 'error')
 
 
-def main():
-    pathTo = kit.PathTo('Cockatoo')
-
+def launch(pathTo):
     fileIndexMap = parameters.loadIndexMap(pathTo.fileIndexMap)
     filesCount = len(fileIndexMap)
-    fileEmbeddingSize = 800
+    fileEmbeddingSize = 300
     wordIndexMap = parameters.loadIndexMap(pathTo.wordIndexMap)
     wordEmbeddings = parameters.loadEmbeddings(pathTo.wordEmbeddings)
     metricsPath = pathTo.metrics('history.csv')
@@ -194,12 +186,11 @@ def main():
     train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPath,
           epochs=10,
           batchSize=100,
-          learningRate=0.03,
-          l1=0,
-          l2=0)
+          learningRate=0.03)
 
     model.dump(pathTo.fileEmbeddings, pathTo.weights)
 
 
 if __name__ == '__main__':
-    main()
+    pathTo = kit.PathTo('Cockatoo')
+    launch(pathTo)

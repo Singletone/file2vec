@@ -398,7 +398,7 @@ def compareEmbeddings(indexMap, embeddingsList, comparator=None, annotate=False)
     xx, yy = zip(*xy)
 
     if comparator is None:
-        comparator = vectors.euclideanDistance
+        comparator = vectors.cosineSimilarity
 
     comparisons = [comparator(embeddingsList[x], embeddingsList[y]) for x, y in xy]
     comparisons = [numpy.nan if c == 1 else c for c in comparisons]
