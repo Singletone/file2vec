@@ -9,16 +9,18 @@ import traininig
 
 class DataPreparationController:
     def launch(self, pathTo):
-        targets = [extraction.launch, weeding.launch, processing.launch, traininig.launch]
+        targets = [extraction.launch, weeding.launch, processing.launch]
 
         for target in targets:
             proces = Process(target=target, args=(pathTo,))
             proces.start()
             proces.join()
 
+        traininig.launch(pathTo)
+
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('Duplicates')
+    pathTo = kit.PathTo('Cockatoo')
 
     controller = DataPreparationController()
     controller.launch(pathTo)

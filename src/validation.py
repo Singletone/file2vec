@@ -400,9 +400,20 @@ def compareEmbeddings(indexMap, embeddingsList, comparator=None, annotate=False)
     if comparator is None:
         comparator = vectors.cosineSimilarity
 
-    comparisons = [comparator(embeddingsList[x], embeddingsList[y]) for x, y in xy]
-    comparisons = [numpy.nan if c == 1 else c for c in comparisons]
+    comparisons = [comparator(embeddingsList[x], embeddingsList[y]) if x != y else numpy.nan for x, y in xy]
     comparisons = numpy.reshape(comparisons, (embeddingsCount, embeddingsCount))
+
+    nanxx, nanyy = numpy.where(numpy.isnan(comparisons))
+    nanxy = zip(nanxx, nanyy)
+    leftx = lambda x: max(x, 0)
+    rightx = lambda x: min(x, comparisons.shape[0])
+    lefty = lambda y: max(y, 0)
+    righty = lambda y: min(y, comparisons.shape[1])
+    for x, y in nanxy:
+        neighbours = comparisons[leftx(x-1):rightx(x+2),lefty(y-1):righty(y+2)]
+        neighbours = neighbours[neighbours > 0]
+        mean = numpy.mean(neighbours)
+        comparisons[x,y] = numpy.mean(neighbours)
 
     plt.subplot(111)
 
@@ -417,7 +428,7 @@ def compareEmbeddings(indexMap, embeddingsList, comparator=None, annotate=False)
 
     if annotate:
         for x, y, c in zip(xx, yy, comparisons.flatten()):
-            c = '{0:.1f}'.format(c)
+            c = '{0:.1f}'.format(c*100)
             plt.annotate(c, (x, y))
 
     plt.show()

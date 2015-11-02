@@ -48,7 +48,7 @@ class WordContextProvider:
                 for wordIndex in range(len(words) - contextSize + 1):
                     window = words[wordIndex: wordIndex + contextSize]
 
-                    yield sentence, window
+                    yield window
 
             words = re.split('\s+', tail.lstrip())
 
@@ -65,7 +65,7 @@ class WordContextProvider:
                 for wordIndex in range(len(words) - contextSize + 1):
                     window = words[wordIndex: wordIndex + contextSize]
 
-                    yield tail, window
+                    yield window
 
 
 def generateNegativeSample(negative, context, wordIndexMap):
@@ -113,12 +113,8 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
         for textFileIndex, textFilePath in enumerate(textFilePaths):
             fileIndexMap[textFilePath] = textFileIndex
 
-            currentSentence = None
             contextProvider = WordContextProvider(textFilePath=textFilePath)
-            for sentence, wordContext in contextProvider.iterate(wordContextSize):
-                if currentSentence != sentence:
-                    currentSentence = sentence
-
+            for wordContext in contextProvider.iterate(wordContextSize):
                 allWordsInWordVocabulary = [word in w2vWordIndexMap for word in wordContext]
 
                 if not all(allWordsInWordVocabulary):
@@ -192,7 +188,7 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
 def launch(pathTo):
     processData(
         inputDirectoryPath = pathTo.weededDir,
-        w2vEmbeddingsFilePath = pathTo.w2vEmbeddings('wiki_full_s300_w10_mc20_hs1.bin'),
+        w2vEmbeddingsFilePath = pathTo.w2vEmbeddings('wiki_full_s800_w10_mc20_hs1.bin'),
         fileIndexMapFilePath = pathTo.fileIndexMap,
         wordIndexMapFilePath = pathTo.wordIndexMap,
         wordEmbeddingsFilePath = pathTo.wordEmbeddings,

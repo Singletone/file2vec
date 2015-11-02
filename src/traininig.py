@@ -1,7 +1,6 @@
 import numpy as np
 import time
 import os
-import math
 
 import theano
 import theano.tensor as T
@@ -127,12 +126,6 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPa
         error = error / batchesCount
         errors.append(error)
 
-        # if len(errors) > 1:
-        #     learningRate = learningRate * (1 - 0.2 * error / errors[-2])
-
-        if error <= 0:
-            break
-
         elapsed = time.time() - startTime
 
         log.progress('Training model: {0:.3f}%. Epoch: {1}. Elapsed: {2}. Error: {3:.3f}. Learning rate: {4}.',
@@ -150,9 +143,6 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPa
 
         validation.dump(metricsPath, epoch, metrics)
 
-        if error <= 0:
-            break
-
     validation.compareEmbeddings(fileIndexMap, model.fileEmbeddings.get_value(), annotate=True)
     validation.plotEmbeddings(fileIndexMap, model.fileEmbeddings.get_value())
     validation.compareMetrics(metricsPath, 'error')
@@ -161,7 +151,7 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPa
 def launch(pathTo):
     fileIndexMap = parameters.loadIndexMap(pathTo.fileIndexMap)
     filesCount = len(fileIndexMap)
-    fileEmbeddingSize = 300
+    fileEmbeddingSize = 800
     wordIndexMap = parameters.loadIndexMap(pathTo.wordIndexMap)
     wordEmbeddings = parameters.loadEmbeddings(pathTo.wordEmbeddings)
     metricsPath = pathTo.metrics('history.csv')
@@ -184,13 +174,13 @@ def launch(pathTo):
     model = Model(fileEmbeddings, wordEmbeddings, contextSize=contextSize, negative=negative)
 
     train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPath,
-          epochs=10,
-          batchSize=100,
-          learningRate=0.03)
+          epochs=30,
+          batchSize=1,
+          learningRate=0.01)
 
     model.dump(pathTo.fileEmbeddings, pathTo.weights)
 
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('Cockatoo')
+    pathTo = kit.PathTo('Duplicates')
     launch(pathTo)
