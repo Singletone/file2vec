@@ -2,15 +2,8 @@ import struct
 import numpy as np
 
 
-INT_SIZE = 4
-FLOAT_SIZE = 4
-
-
-def read(file, format, count, size):
-    buffer = file.read(count * size)
-    format = format.format(count)
-
-    buffer = struct.unpack(format, buffer)
+def read(file, dtype, count):
+    buffer = np.fromfile(file, dtype=dtype, count=count)
 
     if count == 1:
         return buffer[0]
@@ -31,7 +24,7 @@ def write(file, format, buffer):
 
 
 def readi(file, count=1):
-    return read(file, '{0}i', count, INT_SIZE)
+    return read(file, 'int32', count)
 
 
 def writei(file, buffer):
@@ -39,7 +32,7 @@ def writei(file, buffer):
 
 
 def readf(file, count=1):
-    return read(file, '{0}f', count, FLOAT_SIZE)
+    return read(file, 'float32', count)
 
 
 def writef(file, buffer):

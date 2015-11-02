@@ -28,7 +28,7 @@ class WordContextProvider:
             self.textFile.close()
 
 
-    def next(self, contextSize):
+    def iterate(self, contextSize):
         if self.textFile is not None:
             chunk = self.textFile.read(self.chunkSize)
         else:
@@ -177,7 +177,7 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
 
             currentSentence = None
             contextProvider = WordContextProvider(textFilePath=textFilePath)
-            for sentence, wordContext in contextProvider.next(wordContextSize):
+            for sentence, wordContext in contextProvider.iterate(wordContextSize):
                 if currentSentence != sentence:
                     currentSentence = sentence
                     frequencies = getWordFrequencyMap(currentSentence)
@@ -258,7 +258,7 @@ if __name__ == '__main__':
 
     processData(
         inputDirectoryPath = pathTo.extractedDir,
-        w2vEmbeddingsFilePath = pathTo.w2vEmbeddings('wiki_full_s800_w10_mc20_hs1.bin'),
+        w2vEmbeddingsFilePath = pathTo.w2vEmbeddings('wiki_full_s200_w10_mc20_hs1.bin'),
         fileIndexMapFilePath = pathTo.fileIndexMap,
         wordIndexMapFilePath = pathTo.wordIndexMap,
         wordEmbeddingsFilePath = pathTo.wordEmbeddings,

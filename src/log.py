@@ -20,8 +20,9 @@ def lineBreak():
 
 def progress(messageFormat, index, count, *args):
     maxFrequency = 10000
+    body = count - count % maxFrequency
     maxFrequency = count / maxFrequency
-    if maxFrequency != 0 and index % maxFrequency > 0:
+    if maxFrequency != 0 and index % maxFrequency > 0 and index < body:
         return
 
     index = float(index)
