@@ -151,7 +151,7 @@ def loadW2VParameters(filePath, loadEmbeddings=True):
         embeddingsCount, embeddingSize = tuple(firstLine.split(' '))
         embeddingsCount, embeddingSize = int(embeddingsCount), int(embeddingSize)
         wordIndexMap = {}
-        embeddings = []
+        embeddings = numpy.zeros((embeddingsCount, embeddingSize))
 
         log.info('Words count: {0}. Embedding size: {1}.', embeddingsCount, embeddingSize)
 
@@ -165,7 +165,7 @@ def loadW2VParameters(filePath, loadEmbeddings=True):
                     log.lineBreak()
 
                     if loadEmbeddings:
-                        return wordIndexMap, numpy.asarray(embeddings)
+                        return wordIndexMap, embeddings
                     else:
                         return wordIndexMap
 
@@ -178,7 +178,7 @@ def loadW2VParameters(filePath, loadEmbeddings=True):
             wordIndexMap[word] = len(wordIndexMap)
             if loadEmbeddings:
                 embedding = binary.readf(w2vFile, embeddingSize)
-                embeddings.append(embedding)
+                embeddings[wordIndexMap[word]] = embedding
             else:
                 w2vFile.seek(embeddingSize * 4, io.SEEK_CUR)
 
