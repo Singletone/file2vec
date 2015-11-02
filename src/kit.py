@@ -8,7 +8,7 @@ class PathTo:
         self.dataDir = '../data'
         self.dataSetDir = join(self.dataDir, 'Datasets', name)
 
-        self.preparedDir = join(self.dataDir, 'Injested')
+        self.extractedDir = join(self.dataDir, 'Extracted')
         self.concatenatedDir = join(self.dataDir, 'Concatenated')
         self.processedDir = join(self.dataDir, 'Processed')
         self.parametersDir = join(self.dataDir, 'Parameters')

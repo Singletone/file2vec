@@ -257,7 +257,7 @@ if __name__ == '__main__':
     pathTo = kit.PathTo('Cockatoo')
 
     processData(
-        inputDirectoryPath = pathTo.preparedDir,
+        inputDirectoryPath = pathTo.extractedDir,
         w2vEmbeddingsFilePath = pathTo.w2vEmbeddings('wiki_full_s800_w10_mc20_hs1.bin'),
         fileIndexMapFilePath = pathTo.fileIndexMap,
         wordIndexMapFilePath = pathTo.wordIndexMap,

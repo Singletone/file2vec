@@ -4,13 +4,29 @@ import gzip
 import re
 
 
-class WikipediaSourceConnector:
+class TextFilesConnector:
+    def __init__(self, inputDirectoryPath):
+        pathName = inputDirectoryPath + '/*.txt'
+        self.textFilePaths = glob.glob(pathName)
+
+
+    def count(self):
+        return len(self.textFilePaths)
+
+
+    def iterate(self):
+        for textFileIndex, textFilePath in enumerate(self.textFilePaths):
+            with open(textFilePath, 'r') as textFile:
+                textFileName = os.path.basename(textFilePath).split('.')[0]
+                text = textFile.read()
+
+                yield textFileIndex, textFileName, text
+
+
+class WikipediaConnector:
     def __init__(self, inputDirectoryPath):
         pathName = inputDirectoryPath + '/*.txt.gz'
-        dumpPaths = glob.glob(pathName)
-
         self.dumpPaths = glob.glob(pathName)
-        self.total = len(dumpPaths)
 
 
     @staticmethod
@@ -47,7 +63,7 @@ class WikipediaSourceConnector:
             texts = [text.strip() for text in re.split('^\[\[[^\]]+\]\]\s?$', dumpText, flags=re.M) if text]
 
             pages = zip(names, texts)
-            pages = filter(WikipediaSourceConnector.filterPage, pages)
+            pages = filter(WikipediaConnector.filterPage, pages)
         except:
             pass
 
@@ -55,7 +71,7 @@ class WikipediaSourceConnector:
 
 
     @staticmethod
-    def cleanText(name, text):
+    def stripWikiMarkup(name, text):
         name = re.sub('[^_a-zA-Z0-9\s\(\)]', '', name).strip()
 
         restrictedHeaders = ['see also', 'footnotes', 'references', 'further reading', 'external links', 'books']
@@ -67,42 +83,21 @@ class WikipediaSourceConnector:
 
         for heading, paragraph in zip(headings, paragraphs):
             if heading.lower() not in restrictedHeaders:
-                text += paragraph.lower()
-
-        text = re.sub('\s+', ' ', text)
-        text = re.sub('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', 'URL', text)
-        text = re.sub('\([^\)]+\)', '', text)
-        text = re.sub('(:[^\.]\.)', '', text)
-        text = re.sub('[,":_\*]', ' ', text)
-        text = re.sub('!', '.', text)
-        text = re.sub('\?', '.', text)
-        text = re.sub('\s(\.{4,})\s', ' ', text)
-        text = re.sub('\s(\.{3})\s', '.', text)
-        text = re.sub('\s(\.{2})\s', ' ', text)
-        text = re.sub('<[^>]+>', '', text)
-        text = re.sub('([0-9\-]+)s', ' NUMBER ', text)
-        text = re.sub('([0-9\-]+)th', ' NUMBER ', text)
-        text = re.sub('[^a-z]+([0-9\-]+)[^a-z]+', ' NUMBER ', text)
-        text = re.sub('\s([^a-zA-Z0-9\.\-\s]+)\s', ' SYMBOL ', text)
-        text = re.sub('\s([bcdefghjklmnopqrstuvwxyz])\s', ' SYMBOL ', text)
-
-        sentences = re.split('[(\n{2,})\.;]', text)
-        sentences = [re.sub('[\s]+', ' ', sentence).strip() for sentence in sentences]
-        sentences = [sentence for sentence in sentences
-                     if len(sentence.split(' ')) > 5 and sentence.count('NUMBER') < 3]
-
-        text = '. '.join(sentences) + '.'
+                text += paragraph
 
         return name, text
 
 
-    def next(self, clean=True):
+    def count(self):
+        return len(self.dumpPaths)
+
+
+    def iterate(self):
         for dumpIndex, dumpPath in enumerate(self.dumpPaths):
-            dumpName, pages = WikipediaSourceConnector.unpackDump(dumpPath)
+            dumpName, pages = WikipediaConnector.unpackDump(dumpPath)
 
             if any(pages):
                 for name, text in pages:
-                    if clean:
-                        name, text = WikipediaSourceConnector.cleanText(name, text)
+                    name, text = WikipediaConnector.stripWikiMarkup(name, text)
 
-                    yield name, text
+                    yield dumpIndex, name, text

@@ -38,7 +38,7 @@ def progress(messageFormat, index, count, *args):
 
 
 def delta(seconds):
-        deltaString = str(timedelta(seconds=seconds))
-        deltaString = deltaString.split('.')[0]
+    deltaString = str(timedelta(seconds=seconds))
+    deltaString = deltaString.split('.')[0]
 
-        return deltaString
+    return deltaString
