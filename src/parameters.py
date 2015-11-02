@@ -1,7 +1,6 @@
 import os
 import io
 import numpy
-import time
 
 import log
 import binary

@@ -6,7 +6,6 @@ import io
 import kit
 import collections
 import numpy
-import math
 
 import log
 import parameters
@@ -69,50 +68,12 @@ class WordContextProvider:
                     yield tail, window
 
 
-def getWordFrequencyMap(text):
-    words = re.split('\s+', text)
-    frequencies = [(word, text.count(word)) for word in words]
-    wordFrequencyMap = collections.OrderedDict(frequencies)
-
-    return wordFrequencyMap
-
-
-def mergeFrequencyMaps(*frequencyMaps):
-    mergedMap = collections.OrderedDict()
-
-    for frequencyMap in frequencyMaps:
-        for word, frequency in frequencyMap.items():
-            if word in mergedMap:
-                mergedMap[word] += frequency
-            else:
-                mergedMap[word] = frequency
-
-    return mergedMap
-
-
 def generateNegativeSample(negative, context, wordIndexMap):
     wordIndices = map(lambda item: item[1], wordIndexMap.items())
     wordIndices = [index for index in wordIndices if index != context[-1]]
     numpy.random.shuffle(wordIndices)
 
     return wordIndices[:negative]
-
-
-def subsampleFrequentWords(text, wordFrequencyMap):
-    sentences = text.split('.')
-    sentences = [sentence.strip().split(' ') for sentence in sentences if sentence != '']
-
-    threshold = 1e1
-    rnd = numpy.random.rand
-    pruned = []
-    for sentence in sentences:
-        sentence = [word for word in sentence if word in wordFrequencyMap and rnd() > (1 - math.sqrt(threshold/wordFrequencyMap[word]))]
-        sentence = ' '.join(sentence)
-        pruned.append(sentence)
-
-    pruned = '. '.join(pruned)
-
-    return pruned
 
 
 def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
@@ -125,7 +86,6 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
 
     fileIndexMap = {}
     wordIndexMap = collections.OrderedDict()
-    wordFrequencyMap = collections.OrderedDict()
     wordEmbeddings = []
 
     noNegativeSamplingPath = contextsPath
@@ -139,28 +99,6 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
     textFilePaths = glob.glob(pathName)
     textFilePaths = sorted(textFilePaths)
     textFileCount = len(textFilePaths)
-
-    # for textFileIndex, textFilePath in enumerate(textFilePaths):
-    #     fileIndexMap[textFilePath] = textFileIndex
-    #
-    #     currentSentence = None
-    #     contextProvider = WordContextProvider(textFilePath=textFilePath)
-    #     for sentence, wordContext in contextProvider.next(wordContextSize):
-    #         if currentSentence != sentence:
-    #             currentSentence = sentence
-    #             frequencies = getWordFrequencyMap(currentSentence)
-    #             wordFrequencyMap = mergeFrequencyMaps(wordFrequencyMap, frequencies)
-    #
-    # wordFrequencyMap = sorted(wordFrequencyMap.items(), key=lambda item: item[1], reverse=True)
-    # wordFrequencyMap = collections.OrderedDict(wordFrequencyMap)
-    #
-    # for textFilePath, textFileIndex in fileIndexMap.items():
-    #     with open(textFilePath, 'r') as textFile:
-    #         text = textFile.read()
-    #         text = subsampleFrequentWords(text, wordFrequencyMap)
-    #
-    #     with open(textFilePath, 'w+') as textFile:
-    #         textFile.write(text)
 
     w2vWordIndexMap, w2vEmbeddings = parameters.loadW2VParameters(w2vEmbeddingsFilePath)
 
@@ -180,8 +118,6 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
             for sentence, wordContext in contextProvider.iterate(wordContextSize):
                 if currentSentence != sentence:
                     currentSentence = sentence
-                    frequencies = getWordFrequencyMap(currentSentence)
-                    wordFrequencyMap = mergeFrequencyMaps(wordFrequencyMap, frequencies)
 
                 allWordsInWordVocabulary = [word in w2vWordIndexMap for word in wordContext]
 
