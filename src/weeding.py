@@ -107,7 +107,7 @@ def launch(pathTo, hyper):
     )
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('Cockatoo', 'wiki_full_s800_w10_mc20_hs1.bin')
+    pathTo = kit.PathTo('Cockatoo', experiment='default', w2vEmbeddings='wiki_full_s800_w10_mc20_hs1.bin')
     hyper = parameters.HyperParameters(sample=1e1, minCount=2)
 
     launch(pathTo, hyper)

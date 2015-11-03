@@ -22,7 +22,7 @@ class DataPreparationController:
 
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('Wikipedia', 'wiki_full_s800_w10_mc20_hs1.bin')
+    pathTo = kit.PathTo('Wikipedia', experiment='wiki_5_dumps', w2vEmbeddings='wiki_full_s800_w10_mc20_hs1.bin')
     hyper = parameters.HyperParameters(
         connector = connectors.WikipediaConnector(pathTo.dataSetDir),
         sample=1e1,

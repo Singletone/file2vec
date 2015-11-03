@@ -3,11 +3,14 @@ from os.path import join
 
 
 class PathTo:
-    def __init__(self, datasetName, w2vEmbeddings=''):
+    def __init__(self, datasetName, experiment='default', w2vEmbeddings=''):
         self.datasetName = datasetName
+        self.experiment = experiment
         self.w2vEmbeddings = w2vEmbeddings
         self.dataDir = '../data'
         self.dataSetDir = join(self.dataDir, 'Datasets', datasetName)
+        self.experimentsDir = join(self.dataDir, 'Experiments')
+        self.experimentDir = join(self.dataDir, experiment)
 
         self.extractedDir = join(self.dataDir, 'Extracted')
         self.weededDir = join(self.dataDir, 'Weeded')
@@ -18,6 +21,8 @@ class PathTo:
         self.w2vEmbeddingsDir = join(self.dataDir, 'WordEmbeddings')
 
         self.ensureDirectories(
+            self.experimentsDir,
+            self.experimentDir,
             self.extractedDir,
             self.weededDir,
             self.concatenatedDir,

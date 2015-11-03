@@ -88,7 +88,7 @@ def launch(pathTo, hyper):
 
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('Cockatoo')
+    pathTo = kit.PathTo('Cockatoo', experiment='default')
     hyper = parameters.HyperParameters(connector = connectors.TextFilesConnector(pathTo.dataSetDir))
 
     launch(pathTo, hyper)

@@ -188,7 +188,7 @@ def launch(pathTo, hyper):
 
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('Duplicates', 'wiki_full_s800_w10_mc20_hs1.bin')
+    pathTo = kit.PathTo('Duplicates', experiment='default', w2vEmbeddings='wiki_full_s800_w10_mc20_hs1.bin')
     hyper = parameters.HyperParameters(fileEmbeddingSize=800, epochs=20, batchSize=1, learningRate=0.01)
 
     launch(pathTo, hyper)

@@ -213,7 +213,7 @@ def launch(pathTo, hyper):
 
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('Wikipedia', 'wiki_full_s800_w10_mc20_hs1.bin')
+    pathTo = kit.PathTo('Wikipedia', experiment='default', w2vEmbeddings='wiki_full_s800_w10_mc20_hs1.bin')
     hyper = parameters.HyperParameters(windowSize=7, negative=100, strict=False)
 
     launch(pathTo, hyper)
