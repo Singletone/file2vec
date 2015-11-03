@@ -55,7 +55,14 @@ class Model:
         parameters = [self.fileEmbeddings, self.weights]
         subParameters = [files, None]
 
-        cost = -T.mean(T.log(T.nnet.sigmoid(probabilities[:,0])) + T.sum(T.log(T.nnet.sigmoid(-probabilities[:,1:])), axis=1))
+        l1Coef = T.scalar('l1Coefficient', dtype=floatX)
+        l2Coef = T.scalar('l2Coefficient', dtype=floatX)
+
+        l1 = l1Coef * abs(self.weights).sum()
+        l2 = l2Coef * (self.weights ** 2).sum()
+
+        cost = -T.mean(T.log(T.nnet.sigmoid(probabilities[:,0])) + T.sum(T.log(T.nnet.sigmoid(-probabilities[:,1:])), axis=1)) \
+               + l1 + l2
 
         learningRate = T.scalar('learningRate', dtype=floatX)
 
@@ -75,7 +82,7 @@ class Model:
         self.trainingContexts = theano.shared(empty(1,1), 'trainingContexts', borrow=True)
 
         self.trainModel = theano.function(
-            inputs=[batchIndex, batchSize, learningRate],
+            inputs=[batchIndex, batchSize, learningRate, l1Coef, l2Coef],
             outputs=cost,
             updates=updates,
             givens={
@@ -109,7 +116,7 @@ class Model:
 
 
 def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPath,
-          epochs, batchSize, learningRate):
+          epochs, batchSize, learningRate, l1, l2):
     model.trainingContexts.set_value(contexts)
 
     contextsCount, contextSize = contexts.shape
@@ -121,7 +128,7 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPa
     for epoch in xrange(0, epochs):
         error = 0
         for batchIndex in xrange(0, batchesCount):
-            error += model.trainModel(batchIndex, batchSize, learningRate)
+            error += model.trainModel(batchIndex, batchSize, learningRate, l1, l2)
 
         error = error / batchesCount
         errors.append(error)
@@ -176,7 +183,9 @@ def launch(pathTo):
     train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPath,
           epochs=30,
           batchSize=1,
-          learningRate=0.01)
+          learningRate=0.01,
+          l1=0.02,
+          l2=0.005)
 
     model.dump(pathTo.fileEmbeddings, pathTo.weights)
 
