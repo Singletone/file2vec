@@ -20,7 +20,7 @@ class DataPreparationController:
 
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('Cockatoo')
+    pathTo = kit.PathTo('Duplicates', 'wiki_full_s800_w10_mc20_hs1.bin')
 
     controller = DataPreparationController()
     controller.launch(pathTo)

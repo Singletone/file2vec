@@ -188,7 +188,7 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
 def launch(pathTo):
     processData(
         inputDirectoryPath = pathTo.weededDir,
-        w2vEmbeddingsFilePath = pathTo.w2vEmbeddings('wiki_full_s800_w10_mc20_hs1.bin'),
+        w2vEmbeddingsFilePath = pathTo.w2vEmbeddings,
         fileIndexMapFilePath = pathTo.fileIndexMap,
         wordIndexMapFilePath = pathTo.wordIndexMap,
         wordEmbeddingsFilePath = pathTo.wordEmbeddings,
@@ -198,5 +198,5 @@ def launch(pathTo):
 
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('Cockatoo')
+    pathTo = kit.PathTo('Cockatoo', 'wiki_full_s800_w10_mc20_hs1.bin')
     launch(pathTo)

@@ -15,6 +15,7 @@ import binary
 floatX = theano.config.floatX
 empty = lambda *shape: np.empty(shape, dtype='int32')
 rnd2 = lambda d0, d1: np.random.rand(d0, d1).astype(dtype=floatX)
+asfx = lambda x: np.asarray(x, dtype=floatX)
 
 
 class Model:
@@ -29,57 +30,49 @@ class Model:
         else:
             weights = rnd2(fileEmbeddingSize + contextSize * wordEmbeddingSize, wordsCount)
 
-        self.fileEmbeddings = theano.shared(fileEmbeddings, 'fileEmbeddings', borrow=True)
-        self.wordEmbeddings = theano.shared(wordEmbeddings, 'wordEmbeddings', borrow=True)
-        self.weights = theano.shared(weights, 'weights', borrow=True)
+        self.fileEmbeddings = theano.shared(asfx(fileEmbeddings), 'fileEmbeddings', borrow=True)
+        self.wordEmbeddings = theano.shared(asfx(wordEmbeddings), 'wordEmbeddings', borrow=True)
+        self.weights = theano.shared(asfx(weights), 'weights', borrow=True)
 
-        fileIndicesOffset = 0
-        wordIndicesOffset = fileIndicesOffset + 1
+        fileIndexOffset = 0
+        wordIndicesOffset = fileIndexOffset + 1
         indicesOffset = wordIndicesOffset + contextSize
 
         contexts = T.imatrix('contexts')
-        fileIndices = contexts[:,fileIndicesOffset:wordIndicesOffset]
-        wordIndices = contexts[:,wordIndicesOffset:indicesOffset]
-        indices = contexts[:,indicesOffset:indicesOffset + negative]
+        context = T.flatten(contexts)
+        fileIndex = context[fileIndexOffset:wordIndicesOffset]
+        wordIndices = context[wordIndicesOffset:indicesOffset]
+        indices = context[indicesOffset:indicesOffset + negative]
 
-        files = self.fileEmbeddings[fileIndices]
-        fileFeatures = T.flatten(files, outdim=2)
+        file = self.fileEmbeddings[fileIndex]
+        fileFeatures = T.flatten(file, outdim=1)
         words = self.wordEmbeddings[wordIndices]
-        wordFeatures = T.flatten(words, outdim=2)
-        features = T.concatenate([fileFeatures, wordFeatures], axis=1)
+        wordFeatures = T.flatten(words, outdim=1)
+        features = T.concatenate([fileFeatures, wordFeatures], axis=0)
 
-        subWeights = self.weights[:,indices].dimshuffle(1, 0, 2)
+        subWeights = self.weights[:,indices]
 
-        probabilities = T.batched_dot(features, subWeights)
+        probabilities = T.dot(features, subWeights)
 
-        parameters = [self.fileEmbeddings, self.weights]
-        subParameters = [files, None]
+        parameters = [self.fileEmbeddings]
+        subParameters = [file]
 
-        cost = -T.mean(T.log(T.nnet.sigmoid(probabilities[:,0])) + T.sum(T.log(T.nnet.sigmoid(-probabilities[:,1:])), axis=1))
+        cost = -T.mean(T.log(T.nnet.sigmoid(probabilities[0])) + T.sum(T.log(T.nnet.sigmoid(-probabilities[1:]))))
 
         learningRate = T.scalar('learningRate', dtype=floatX)
 
-        updates = []
-        for p, subP in zip(parameters, subParameters):
-            if subP is not None:
-                gradient = T.grad(cost, wrt=subP)
-                update = (p, T.inc_subtensor(subP, -learningRate * gradient))
-            else:
-                gradient = T.grad(cost, wrt=p)
-                update = (p, p - learningRate * gradient)
+        gradients = [T.grad(cost, wrt=subP, consider_constant=[self.wordEmbeddings, self.weights]) for subP in subParameters]
+        updates = [(p, T.inc_subtensor(subP, -learningRate * g)) for p, subP, g in zip(parameters, subParameters, gradients)]
 
-            updates.append(update)
-
-        batchIndex = T.iscalar('batchIndex')
-        batchSize = T.iscalar('batchSize')
+        contextIndex = T.iscalar('batchIndex')
         self.trainingContexts = theano.shared(empty(1,1), 'trainingContexts', borrow=True)
 
         self.trainModel = theano.function(
-            inputs=[batchIndex, batchSize, learningRate],
+            inputs=[contextIndex, learningRate],
             outputs=cost,
             updates=updates,
             givens={
-                contexts: self.trainingContexts[batchIndex * batchSize : (batchIndex + 1) * batchSize]
+                contexts: self.trainingContexts[contextIndex:contextIndex + 1]
             }
         )
 
@@ -104,7 +97,7 @@ class Model:
         contextSize = (featuresCount - fileEmbeddingSize) / wordEmbeddingSize
         negative = activationsCount - 1
 
-        return Model(filesCount, fileEmbeddingSize, wordEmbeddings, contextSize, negative)
+        return Model(fileEmbeddings, wordEmbeddings, weights)
 
 
 
@@ -114,38 +107,39 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPa
 
     contextsCount, contextSize = contexts.shape
 
-    batchesCount = contextsCount / batchSize + int(contextsCount % batchSize > 0)
-
     startTime = time.time()
-    errors = []
     for epoch in xrange(0, epochs):
-        error = 0
-        for batchIndex in xrange(0, batchesCount):
-            error += model.trainModel(batchIndex, batchSize, learningRate)
-
-        error = error / batchesCount
-        errors.append(error)
-
-        elapsed = time.time() - startTime
-
-        log.progress('Training model: {0:.3f}%. Epoch: {1}. Elapsed: {2}. Error: {3:.3f}. Learning rate: {4}.',
-                     epoch + 1,
-                     epochs,
-                     epoch + 1,
-                     log.delta(elapsed),
-                     error,
-                     learningRate)
+        errors = []
+        for contextIndex in xrange(0, contextsCount):
+            error = model.trainModel(contextIndex, learningRate)
+            errors.append(error)
 
         metrics = {
-            'error': error,
+            'meanError': np.mean(errors),
+            'medianError': np.median(errors),
+            'maxError': np.max(errors),
+            'minError': np.min(errors),
             'learningRate': learningRate
         }
 
         validation.dump(metricsPath, epoch, metrics)
 
+        elapsed = time.time() - startTime
+
+        log.progress('Training model: {0:.3f}%. Epoch: {1}. Elapsed: {2}. Error(mean,median,min,max): {3:.3f}, {4:.3f}, {5:.3f}, {6:.3f}. Learning rate: {7}.',
+                     epoch + 1,
+                     epochs,
+                     epoch + 1,
+                     log.delta(elapsed),
+                     metrics['meanError'],
+                     metrics['medianError'],
+                     metrics['minError'],
+                     metrics['maxError'],
+                     learningRate)
+
     validation.compareEmbeddings(fileIndexMap, model.fileEmbeddings.get_value(), annotate=True)
-    validation.plotEmbeddings(fileIndexMap, model.fileEmbeddings.get_value())
-    validation.compareMetrics(metricsPath, 'error')
+    # validation.plotEmbeddings(fileIndexMap, model.fileEmbeddings.get_value())
+    # validation.compareMetrics(metricsPath, 'error')
 
 
 def launch(pathTo):
@@ -171,7 +165,8 @@ def launch(pathTo):
              contextProvider.negative)
 
     fileEmbeddings = rnd2(filesCount, fileEmbeddingSize)
-    model = Model(fileEmbeddings, wordEmbeddings, contextSize=contextSize, negative=negative)
+    # model = Model(fileEmbeddings, wordEmbeddings, contextSize=contextSize, negative=negative)
+    model = Model.load(pathTo.fileEmbeddings, pathTo.wordEmbeddings, pathTo.weights)
 
     train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPath,
           epochs=30,
@@ -182,5 +177,5 @@ def launch(pathTo):
 
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('Duplicates')
+    pathTo = kit.PathTo('Duplicates', 'wiki_full_s800_w10_mc20_hs1.bin')
     launch(pathTo)
