@@ -30,7 +30,7 @@ if __name__ == '__main__':
         windowSize=3,
         negative=100,
         strict=False,
-        fileEmbeddingSize=10000,
+        fileEmbeddingSize=1600,
         epochs=5,
         batchSize=1,
         learningRate=0.025

@@ -9,7 +9,7 @@ if __name__ == '__main__':
     fileIndexMap = loadIndexMap(pathTo.fileIndexMap)
     fileEmbeddings = loadEmbeddings(pathTo.fileEmbeddings)
 
-    comparator = lambda a, b: cosineSimilarity(a, b) + 2 / euclideanDistance(a, b)
+    comparator = lambda a, b: cosineSimilarity(a, b) + 0.001 / euclideanDistance(a, b)
 
     compareEmbeddings(fileIndexMap, fileEmbeddings, comparator=comparator, annotate=False, axisLabels=True)
     # compareMetrics(pathTo.metrics('history.csv'), 'meanError', 'medianError', 'minError', 'maxError')
