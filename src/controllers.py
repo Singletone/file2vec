@@ -27,10 +27,10 @@ if __name__ == '__main__':
         connector = connectors.TextFilesConnector(pathTo.dataSetDir),
         sample=1e1,
         minCount=1,
-        windowSize=5,
+        windowSize=3,
         negative=100,
         fileEmbeddingSize=10000,
-        epochs=50,
+        epochs=5,
         batchSize=1,
         learningRate=0.025
     )

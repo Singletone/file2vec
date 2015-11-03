@@ -390,7 +390,7 @@ def mapEmbeddings2LowDim(indexMap, embeddingsList):
     plt.show()
 
 
-def compareEmbeddings(indexMap, embeddingsList, comparator=None, annotate=False):
+def compareEmbeddings(indexMap, embeddingsList, comparator=None, annotate=False, axisLabels=True):
     embeddingsCount = len(indexMap)
     embeddingIndices = numpy.arange(0, embeddingsCount)
 
@@ -416,12 +416,13 @@ def compareEmbeddings(indexMap, embeddingsList, comparator=None, annotate=False)
 
     plt.subplot(111)
 
-    filePaths = indexMap.keys()
-    fileNames = [os.path.basename(filePath).split('.')[0] for filePath in filePaths]
-    indices = [indexMap[filePath] for filePath in filePaths]
+    if axisLabels:
+        filePaths = indexMap.keys()
+        fileNames = [os.path.basename(filePath).split('.')[0] for filePath in filePaths]
+        indices = [indexMap[filePath] for filePath in filePaths]
 
-    plt.xticks(indices, fileNames, size='small', rotation='vertical')
-    plt.yticks(indices, fileNames, size='small')
+        plt.xticks(indices, fileNames, size='small', rotation='vertical')
+        plt.yticks(indices, fileNames, size='small')
 
     plt.contourf(comparisons)
 
