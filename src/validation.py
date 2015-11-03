@@ -6,7 +6,6 @@ import random
 import itertools
 from matplotlib import colors
 from matplotlib import pyplot as plt
-from multiprocessing import Pool
 
 import pandas
 
@@ -401,9 +400,8 @@ def compareEmbeddings(indexMap, embeddingsList, comparator=None, annotate=False,
     if comparator is None:
         comparator = vectors.cosineSimilarity
 
-    pool = Pool(5)
-    function = lambda x, y: comparator(embeddingsList[x], embeddingsList[y]) if x != y else numpy.nan
-    comparisons = pool.map(function, xy)
+    function = lambda xy: comparator(embeddingsList[xy[0]], embeddingsList[xy[1]]) if xy[0] != xy[1] else numpy.nan
+    comparisons = map(function, xy)
     comparisons = numpy.reshape(comparisons, (embeddingsCount, embeddingsCount))
 
     nanxx, nanyy = numpy.where(numpy.isnan(comparisons))
