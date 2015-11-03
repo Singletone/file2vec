@@ -68,22 +68,26 @@ class WordContextProvider:
                     yield window
 
 
-def generateNegativeSamples(negative, contexts, wordIndexMap):
-    negativeSamples = numpy.zeros((contexts.shape[0], negative))
-
+def generateNegativeSamples(negative, contexts, wordIndexMap, strict=False):
     wordIndices = map(lambda item: item[1], wordIndexMap.items())
     wordIndices = numpy.asarray(wordIndices)
+    highWordIndex = max(wordIndices)
 
-    for contextIndex in xrange(0, contexts.shape[0]):
-        prunedWordIndices = wordIndices[wordIndices != contexts[contextIndex, -1]]
-        numpy.random.shuffle(prunedWordIndices)
-        negativeSamples[contextIndex] = prunedWordIndices[:negative]
+    if strict:
+        negativeSamples = numpy.zeros((contexts.shape[0], negative))
+        for contextIndex in xrange(0, contexts.shape[0]):
+            prunedWordIndices = wordIndices[wordIndices != contexts[contextIndex, -1]]
+            numpy.random.shuffle(prunedWordIndices)
+            negativeSamples[contextIndex] = prunedWordIndices[:negative]
+    else:
+        negativeSamples = numpy.random.randint(0, high=highWordIndex+1, size=contexts.shape[0]*negative)
+        negativeSamples = negativeSamples.reshape((contexts.shape[0], negative))
 
     return negativeSamples
 
 
 def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
-                wordIndexMapFilePath, wordEmbeddingsFilePath, contextsPath, windowSize, negative):
+                wordIndexMapFilePath, wordEmbeddingsFilePath, contextsPath, windowSize, negative, strict):
     if os.path.exists(contextsPath):
         os.remove(contextsPath)
 
@@ -171,7 +175,7 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
 
             for batchIndex in xrange(0, batchesCount):
                 contexts = contextProvider[batchIndex * batchSize : (batchIndex + 1) * batchSize]
-                negativeSamples = generateNegativeSamples(negative, contexts, wordIndexMap)
+                negativeSamples = generateNegativeSamples(negative, contexts, wordIndexMap, strict)
                 contexts = numpy.concatenate([contexts, negativeSamples], axis=1)
                 contexts = numpy.ravel(contexts)
 
@@ -204,11 +208,12 @@ def launch(pathTo, hyper):
         wordEmbeddingsFilePath = pathTo.wordEmbeddings,
         contextsPath = pathTo.contexts,
         windowSize = hyper.windowSize,
-        negative = hyper.negative)
+        negative = hyper.negative,
+        strict = hyper.strict)
 
 
 if __name__ == '__main__':
     pathTo = kit.PathTo('Wikipedia', 'wiki_full_s800_w10_mc20_hs1.bin')
-    hyper = parameters.HyperParameters(windowSize=7, negative=100)
+    hyper = parameters.HyperParameters(windowSize=7, negative=100, strict=False)
 
     launch(pathTo, hyper)

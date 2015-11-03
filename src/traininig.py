@@ -110,11 +110,30 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPa
 
     initialiLearningRate = learningRate
     startTime = time.time()
+    metrics = {
+        'meanError': np.nan,
+        'medianError': np.nan,
+        'maxError': np.nan,
+        'minError': np.nan,
+        'learningRate': learningRate
+    }
+
     for epoch in xrange(0, epochs):
         errors = []
         for contextIndex in xrange(0, contextsCount):
             error = model.trainModel(contextIndex, learningRate)
             errors.append(error)
+
+            log.progress('Training model: {0:.3f}%. Epoch: {1}. Elapsed: {2}. Error(mean,median,min,max): {3:.3f}, {4:.3f}, {5:.3f}, {6:.3f}. Learning rate: {7}.',
+                     epoch * contextsCount + contextIndex + 1,
+                     epochs * contextsCount,
+                     epoch + 1,
+                     log.delta(time.time() - startTime),
+                     metrics['meanError'],
+                     metrics['medianError'],
+                     metrics['minError'],
+                     metrics['maxError'],
+                     learningRate)
 
         learningRate = learningRate * (1 - (float(epoch) + 1) / epochs)
         learningRate = max(initialiLearningRate * 0.0001, learningRate)
@@ -128,19 +147,6 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPa
         }
 
         validation.dump(metricsPath, epoch, metrics)
-
-        elapsed = time.time() - startTime
-
-        log.progress('Training model: {0:.3f}%. Epoch: {1}. Elapsed: {2}. Error(mean,median,min,max): {3:.3f}, {4:.3f}, {5:.3f}, {6:.3f}. Learning rate: {7}.',
-                     epoch + 1,
-                     epochs,
-                     epoch + 1,
-                     log.delta(elapsed),
-                     metrics['meanError'],
-                     metrics['medianError'],
-                     metrics['minError'],
-                     metrics['maxError'],
-                     learningRate)
 
     validation.compareEmbeddings(fileIndexMap, model.fileEmbeddings.get_value(), annotate=True)
     # validation.plotEmbeddings(fileIndexMap, model.fileEmbeddings.get_value())

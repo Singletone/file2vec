@@ -22,13 +22,14 @@ class DataPreparationController:
 
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('Cockatoo', 'wiki_full_s800_w10_mc20_hs1.bin')
+    pathTo = kit.PathTo('Wikipedia', 'wiki_full_s800_w10_mc20_hs1.bin')
     hyper = parameters.HyperParameters(
-        connector = connectors.TextFilesConnector(pathTo.dataSetDir),
+        connector = connectors.WikipediaConnector(pathTo.dataSetDir),
         sample=1e1,
         minCount=1,
         windowSize=3,
         negative=100,
+        strict=False,
         fileEmbeddingSize=10000,
         epochs=5,
         batchSize=1,

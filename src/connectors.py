@@ -2,6 +2,7 @@ import os
 import glob
 import gzip
 import re
+import numpy
 
 
 class TextFilesConnector:
@@ -26,7 +27,12 @@ class TextFilesConnector:
 class WikipediaConnector:
     def __init__(self, inputDirectoryPath):
         pathName = inputDirectoryPath + '/*.txt.gz'
-        self.dumpPaths = glob.glob(pathName)[:10]
+        self.dumpPaths = glob.glob(pathName)
+
+        numpy.random.seed(123)
+        numpy.random.shuffle(self.dumpPaths)
+
+        self.dumpPaths = self.dumpPaths[:2]
 
 
     @staticmethod
