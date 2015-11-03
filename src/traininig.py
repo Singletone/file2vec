@@ -148,10 +148,6 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPa
 
         validation.dump(metricsPath, epoch, metrics)
 
-    validation.compareEmbeddings(fileIndexMap, model.fileEmbeddings.get_value(), annotate=True)
-    # validation.plotEmbeddings(fileIndexMap, model.fileEmbeddings.get_value())
-    # validation.compareMetrics(metricsPath, 'error')
-
 
 def launch(pathTo, hyper):
     fileIndexMap = parameters.loadIndexMap(pathTo.fileIndexMap)

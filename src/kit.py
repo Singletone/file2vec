@@ -10,15 +10,15 @@ class PathTo:
         self.dataDir = '../data'
         self.dataSetDir = join(self.dataDir, 'Datasets', datasetName)
         self.experimentsDir = join(self.dataDir, 'Experiments')
-        self.experimentDir = join(self.dataDir, experiment)
+        self.experimentDir = join(self.experimentsDir, experiment)
 
-        self.extractedDir = join(self.dataDir, 'Extracted')
-        self.weededDir = join(self.dataDir, 'Weeded')
-        self.concatenatedDir = join(self.dataDir, 'Concatenated')
-        self.processedDir = join(self.dataDir, 'Processed')
-        self.parametersDir = join(self.dataDir, 'Parameters')
-        self.metricsDir = join(self.dataDir, 'Metrics')
         self.w2vEmbeddingsDir = join(self.dataDir, 'WordEmbeddings')
+        self.extractedDir = join(self.experimentDir, 'Extracted')
+        self.weededDir = join(self.experimentDir, 'Weeded')
+        self.concatenatedDir = join(self.experimentDir, 'Concatenated')
+        self.processedDir = join(self.experimentDir, 'Processed')
+        self.parametersDir = join(self.experimentDir, 'Parameters')
+        self.metricsDir = join(self.experimentDir, 'Metrics')
 
         self.ensureDirectories(
             self.experimentsDir,
