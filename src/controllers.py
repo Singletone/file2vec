@@ -27,11 +27,12 @@ if __name__ == '__main__':
         connector = connectors.TextFilesConnector(pathTo.dataSetDir),
         sample=1e1,
         minCount=1,
-        windowSize=7,
+        windowSize=5,
         negative=100,
-        epochs=5,
+        fileEmbeddingSize=10000,
+        epochs=50,
         batchSize=1,
-        learningRate=0.01
+        learningRate=0.025
     )
 
     controller = DataPreparationController()

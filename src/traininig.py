@@ -115,6 +115,8 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPa
             error = model.trainModel(contextIndex, learningRate)
             errors.append(error)
 
+        learningRate = learningRate * (1 - (float(epoch) + 1) / epochs)
+
         metrics = {
             'meanError': np.mean(errors),
             'medianError': np.median(errors),
@@ -146,7 +148,7 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPa
 def launch(pathTo, hyper):
     fileIndexMap = parameters.loadIndexMap(pathTo.fileIndexMap)
     filesCount = len(fileIndexMap)
-    fileEmbeddingSize = 800
+    fileEmbeddingSize = hyper.fileEmbeddingSize
     wordIndexMap = parameters.loadIndexMap(pathTo.wordIndexMap)
     wordEmbeddings = parameters.loadEmbeddings(pathTo.wordEmbeddings)
     metricsPath = pathTo.metrics('history.csv')
@@ -179,6 +181,6 @@ def launch(pathTo, hyper):
 
 if __name__ == '__main__':
     pathTo = kit.PathTo('Duplicates', 'wiki_full_s800_w10_mc20_hs1.bin')
-    hyper = parameters.HyperParameters(epochs=20, batchSize=1, learningRate=0.01)
+    hyper = parameters.HyperParameters(fileEmbeddingSize=800, epochs=20, batchSize=1, learningRate=0.01)
 
     launch(pathTo, hyper)

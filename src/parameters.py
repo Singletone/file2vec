@@ -60,12 +60,13 @@ class IndexContextProvider:
 
 class HyperParameters:
     def __init__(self, connector=None, sample=1e1, minCount=2, windowSize=7,
-                 negative=100, epochs=20, batchSize=1, learningRate=0.01):
+                 negative=100, fileEmbeddingSize=800, epochs=20, batchSize=1, learningRate=0.01):
         self.connector = connector
         self.sample = sample
         self.minCount = minCount
         self.windowSize = windowSize
         self.negative = negative
+        self.fileEmbeddingSize = fileEmbeddingSize
         self.epochs = epochs
         self.batchSize = batchSize
         self.learningRate = learningRate
