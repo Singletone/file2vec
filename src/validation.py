@@ -412,7 +412,6 @@ def compareEmbeddings(indexMap, embeddingsList, comparator=None, annotate=False)
     for x, y in nanxy:
         neighbours = comparisons[leftx(x-1):rightx(x+2),lefty(y-1):righty(y+2)]
         neighbours = neighbours[neighbours > 0]
-        mean = numpy.mean(neighbours)
         comparisons[x,y] = numpy.mean(neighbours)
 
     plt.subplot(111)

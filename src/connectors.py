@@ -26,7 +26,7 @@ class TextFilesConnector:
 class WikipediaConnector:
     def __init__(self, inputDirectoryPath):
         pathName = inputDirectoryPath + '/*.txt.gz'
-        self.dumpPaths = glob.glob(pathName)
+        self.dumpPaths = glob.glob(pathName)[:10]
 
 
     @staticmethod

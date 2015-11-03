@@ -56,12 +56,19 @@ class Model:
 
         parameters = [self.fileEmbeddings]
         subParameters = [file]
+        consider_constant = [self.wordEmbeddings]
+
+        if weights is not None:
+            consider_constant.append(self.weights)
+        else:
+            parameters.append(self.weights)
+            subParameters.append(subWeights)
 
         cost = -T.mean(T.log(T.nnet.sigmoid(probabilities[0])) + T.sum(T.log(T.nnet.sigmoid(-probabilities[1:]))))
 
         learningRate = T.scalar('learningRate', dtype=floatX)
 
-        gradients = [T.grad(cost, wrt=subP, consider_constant=[self.wordEmbeddings, self.weights]) for subP in subParameters]
+        gradients = [T.grad(cost, wrt=subP, consider_constant=consider_constant) for subP in subParameters]
         updates = [(p, T.inc_subtensor(subP, -learningRate * g)) for p, subP, g in zip(parameters, subParameters, gradients)]
 
         contextIndex = T.iscalar('batchIndex')
@@ -90,12 +97,6 @@ class Model:
         fileEmbeddings = binary.loadMatrix(fileEmbeddingsPath)
         wordEmbeddings = binary.loadMatrix(wordEmbeddingsPath)
         weights = binary.loadMatrix(weightsPath)
-
-        filesCount, fileEmbeddingSize = fileEmbeddings.shape
-        wordsCount, wordEmbeddingSize = wordEmbeddings.shape
-        featuresCount, activationsCount = weights.shape
-        contextSize = (featuresCount - fileEmbeddingSize) / wordEmbeddingSize
-        negative = activationsCount - 1
 
         return Model(fileEmbeddings, wordEmbeddings, weights)
 
@@ -142,7 +143,7 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPa
     # validation.compareMetrics(metricsPath, 'error')
 
 
-def launch(pathTo):
+def launch(pathTo, hyper):
     fileIndexMap = parameters.loadIndexMap(pathTo.fileIndexMap)
     filesCount = len(fileIndexMap)
     fileEmbeddingSize = 800
@@ -165,17 +166,19 @@ def launch(pathTo):
              contextProvider.negative)
 
     fileEmbeddings = rnd2(filesCount, fileEmbeddingSize)
-    # model = Model(fileEmbeddings, wordEmbeddings, contextSize=contextSize, negative=negative)
-    model = Model.load(pathTo.fileEmbeddings, pathTo.wordEmbeddings, pathTo.weights)
+    model = Model(fileEmbeddings, wordEmbeddings, contextSize=contextSize, negative=negative)
+    # model = Model.load(pathTo.fileEmbeddings, pathTo.wordEmbeddings, pathTo.weights)
 
     train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPath,
-          epochs=30,
-          batchSize=1,
-          learningRate=0.01)
+          epochs=hyper.epochs,
+          batchSize=hyper.batchSize,
+          learningRate=hyper.learningRate)
 
     model.dump(pathTo.fileEmbeddings, pathTo.weights)
 
 
 if __name__ == '__main__':
     pathTo = kit.PathTo('Duplicates', 'wiki_full_s800_w10_mc20_hs1.bin')
-    launch(pathTo)
+    hyper = parameters.HyperParameters(epochs=20, batchSize=1, learningRate=0.01)
+
+    launch(pathTo, hyper)

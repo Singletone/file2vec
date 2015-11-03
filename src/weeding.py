@@ -8,6 +8,7 @@ import shutil
 
 import kit
 import log
+import parameters
 
 
 def iterateSentences(text):
@@ -97,15 +98,17 @@ def weed(inputDirectoryPath, outputDirectoryPath, sample, minCount):
     log.lineBreak()
 
 
-def launch(pathTo):
+def launch(pathTo, hyper):
     weed(
         inputDirectoryPath = pathTo.extractedDir,
         outputDirectoryPath = pathTo.weededDir,
-        sample = 1e1,
-        minCount = 1
+        sample = hyper.sample,
+        minCount = hyper.minCount
     )
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('Cockatoo')
-    launch(pathTo)
+    pathTo = kit.PathTo('Cockatoo', 'wiki_full_s800_w10_mc20_hs1.bin')
+    hyper = parameters.HyperParameters(sample=1e1, minCount=2)
+
+    launch(pathTo, hyper)
 

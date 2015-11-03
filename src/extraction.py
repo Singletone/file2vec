@@ -6,6 +6,7 @@ import re
 import kit
 import log
 import connectors
+import parameters
 
 
 def clean(text):
@@ -82,11 +83,12 @@ def extract(outputDirectoryPath, outputConcatFilePath, connector):
     log.lineBreak()
 
 
-def launch(pathTo):
-    connector = connectors.TextFilesConnector(pathTo.dataSetDir)
-    extract(pathTo.extractedDir, pathTo.concatenated, connector)
+def launch(pathTo, hyper):
+    extract(pathTo.extractedDir, pathTo.concatenated, hyper.connector)
 
 
 if __name__ == '__main__':
     pathTo = kit.PathTo('Cockatoo')
-    launch(pathTo)
+    hyper = parameters.HyperParameters(connector = connectors.TextFilesConnector(pathTo.dataSetDir))
+
+    launch(pathTo, hyper)

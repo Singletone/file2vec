@@ -68,12 +68,18 @@ class WordContextProvider:
                     yield window
 
 
-def generateNegativeSample(negative, context, wordIndexMap):
-    wordIndices = map(lambda item: item[1], wordIndexMap.items())
-    wordIndices = [index for index in wordIndices if index != context[-1]]
-    numpy.random.shuffle(wordIndices)
+def generateNegativeSamples(negative, contexts, wordIndexMap):
+    negativeSamples = numpy.zeros((contexts.shape[0], negative))
 
-    return wordIndices[:negative]
+    wordIndices = map(lambda item: item[1], wordIndexMap.items())
+    wordIndices = numpy.asarray(wordIndices)
+
+    for contextIndex in xrange(0, contexts.shape[0]):
+        prunedWordIndices = wordIndices[wordIndices != contexts[contextIndex, -1]]
+        numpy.random.shuffle(prunedWordIndices)
+        negativeSamples[contextIndex] = prunedWordIndices[:negative]
+
+    return negativeSamples
 
 
 def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
@@ -160,19 +166,23 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
             binary.writei(contextsFile, windowSize)
             binary.writei(contextsFile, negative)
 
-            for contextIndex in xrange(0, contextsCount):
-                context = contextProvider[contextIndex]
-                negativeSample = generateNegativeSample(negative, context, wordIndexMap)
-                context = numpy.concatenate([context, negativeSample])
+            batchSize = 10000
+            batchesCount = contextsCount / batchSize + 1
 
-                binary.writei(contextsFile, context)
+            for batchIndex in xrange(0, batchesCount):
+                contexts = contextProvider[batchIndex * batchSize : (batchIndex + 1) * batchSize]
+                negativeSamples = generateNegativeSamples(negative, contexts, wordIndexMap)
+                contexts = numpy.concatenate([contexts, negativeSamples], axis=1)
+                contexts = numpy.ravel(contexts)
+
+                binary.writei(contextsFile, contexts)
 
                 currentTime = time.time()
                 elapsed = currentTime - startTime
 
                 log.progress('Negative sampling: {0:.3f}%. Elapsed: {1}.',
-                     contextIndex + 1,
-                     contextsCount,
+                     batchIndex + 1,
+                     batchesCount,
                      log.delta(elapsed))
 
             log.lineBreak()
@@ -185,7 +195,7 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
     parameters.dumpEmbeddings(wordEmbeddings, wordEmbeddingsFilePath)
 
 
-def launch(pathTo):
+def launch(pathTo, hyper):
     processData(
         inputDirectoryPath = pathTo.weededDir,
         w2vEmbeddingsFilePath = pathTo.w2vEmbeddings,
@@ -193,10 +203,12 @@ def launch(pathTo):
         wordIndexMapFilePath = pathTo.wordIndexMap,
         wordEmbeddingsFilePath = pathTo.wordEmbeddings,
         contextsPath = pathTo.contexts,
-        windowSize = 10,
-        negative = 10)
+        windowSize = hyper.windowSize,
+        negative = hyper.negative)
 
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('Cockatoo', 'wiki_full_s800_w10_mc20_hs1.bin')
-    launch(pathTo)
+    pathTo = kit.PathTo('Wikipedia', 'wiki_full_s800_w10_mc20_hs1.bin')
+    hyper = parameters.HyperParameters(windowSize=7, negative=100)
+
+    launch(pathTo, hyper)

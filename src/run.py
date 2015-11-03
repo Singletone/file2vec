@@ -10,4 +10,4 @@ if __name__ == '__main__':
     fileEmbeddings = loadEmbeddings(pathTo.fileEmbeddings)
 
     # compareEmbeddings(fileIndexMap, fileEmbeddings, annotate=True)
-    compareMetrics(pathTo.metrics('history.csv'), 'maxError')
+    compareMetrics(pathTo.metrics('history.csv'), 'meanError', 'medianError', 'minError', 'maxError')

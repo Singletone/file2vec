@@ -3,7 +3,7 @@ from os.path import join
 
 
 class PathTo:
-    def __init__(self, datasetName, w2vEmbeddings):
+    def __init__(self, datasetName, w2vEmbeddings=''):
         self.datasetName = datasetName
         self.w2vEmbeddings = w2vEmbeddings
         self.dataDir = '../data'
