@@ -108,6 +108,7 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPa
 
     contextsCount, contextSize = contexts.shape
 
+    initialiLearningRate = learningRate
     startTime = time.time()
     for epoch in xrange(0, epochs):
         errors = []
@@ -116,6 +117,7 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPa
             errors.append(error)
 
         learningRate = learningRate * (1 - (float(epoch) + 1) / epochs)
+        learningRate = max(initialiLearningRate * 0.0001, learningRate)
 
         metrics = {
             'meanError': np.mean(errors),
