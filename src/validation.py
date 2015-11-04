@@ -1,3 +1,4 @@
+import kit
 import scipy.stats
 import numpy
 import re
@@ -436,7 +437,9 @@ def compareEmbeddings(indexMap, embeddingsList, comparator=None, annotate=False,
 
 
 def main():
-    embeddingsFilePath = '../data/Text8-vectors/vectors.bin'
+    pathTo = kit.PathTo('IMDB', w2vEmbeddings='wiki_full_s1000_w10_mc20_hs1.bin')
+
+    embeddingsFilePath = pathTo.w2vEmbeddings
     wordIndexMap, embeddings = parameters.loadW2VParameters(embeddingsFilePath)
 
     rgMetric = rubensteinGoodenough(wordIndexMap, embeddings)

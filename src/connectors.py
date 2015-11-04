@@ -107,3 +107,38 @@ class WikipediaConnector:
                     name, text = WikipediaConnector.stripWikiMarkup(name, text)
 
                     yield dumpIndex, name, text
+
+
+class ImdbConnector:
+    def __init__(self, inputDirectoryPath):
+        self.inputDirectoryPath = inputDirectoryPath
+
+        self.trainDir = os.path.join(self.inputDirectoryPath, 'train')
+        self.trainNegativeDir = os.path.join(self.trainDir, 'neg')
+        self.trainPositiveDir = os.path.join(self.trainDir, 'pos')
+        self.trainUnsupervisedDir = os.path.join(self.trainDir, 'unsup')
+
+        self.testDir = os.path.join(self.inputDirectoryPath, 'test')
+        self.testNegativeDir = os.path.join(self.testDir, 'neg')
+        self.testPositiveDir = os.path.join(self.testDir, 'pos')
+
+        dirs = [self.trainNegativeDir, self.trainPositiveDir, self.trainUnsupervisedDir,
+                self.testNegativeDir, self.testPositiveDir]
+
+        self.textFilesPaths = []
+        for dir in dirs:
+            pathName = dir + '/*.txt'
+            self.textFilesPaths += glob.glob(pathName)
+
+
+    def count(self):
+        return len(self.textFilesPaths)
+
+
+    def iterate(self):
+        for textFileIndex, textFilePath in enumerate(self.textFilesPaths):
+            with open(textFilePath, 'r') as textFile:
+                name = os.path.basename(textFilePath).split('.')[0]
+                text = textFile.read()
+
+                yield textFileIndex, name, text

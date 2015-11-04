@@ -9,6 +9,7 @@ import shutil
 import kit
 import log
 import parameters
+import connectors
 
 
 def iterateSentences(text):
@@ -51,47 +52,42 @@ def subsampleAndPrune(text, wordFrequencyMap, sample, minCount):
     return text
 
 
-def weed(inputDirectoryPath, outputDirectoryPath, sample, minCount):
+def buildWordFrequencyMap(connector):
+    wordFrequencyMap = collections.OrderedDict()
+
+    textFilesCount = connector.count()
+    for textFileIndex, name, text in connector.iterate():
+        for word in iterateWords(text):
+            if word not in wordFrequencyMap:
+                wordFrequencyMap[word] = 1
+            else:
+                wordFrequencyMap[word] += 1
+
+        log.progress('Building frequency map: {0:.3f}.', textFileIndex + 1, textFilesCount)
+
+    log.lineBreak()
+
+    return wordFrequencyMap
+
+
+
+def weed(inputDirectoryPath, outputDirectoryPath, sample, minCount, connector):
     if os.path.exists(outputDirectoryPath):
         shutil.rmtree(outputDirectoryPath, ignore_errors=True)
 
     os.mkdir(outputDirectoryPath)
     os.chown(outputDirectoryPath, 1000, 1000)
 
-    pathName = inputDirectoryPath + '/*.txt'
-    textFilePaths = glob.glob(pathName)
-    textFilePaths = sorted(textFilePaths)
-    textFilesCount = len(textFilePaths)
+    textFilesCount = connector.count()
 
-    wordFrequencyMap = collections.OrderedDict()
+    wordFrequencyMap = buildWordFrequencyMap(connector)
 
-    for textFileIndex, textFilePath in enumerate(textFilePaths):
-        with open(textFilePath, 'r') as textFile:
-            text = textFile.read()
+    for textFileIndex, name, text in connector.iterate():
+        text = subsampleAndPrune(text, wordFrequencyMap, sample, minCount)
+        weededFilePath = os.path.join(outputDirectoryPath, name + '.txt')
 
-            for word in iterateWords(text):
-                if word not in wordFrequencyMap:
-                    wordFrequencyMap[word] = 1
-                else:
-                    wordFrequencyMap[word] += 1
-
-        log.progress('Building frequency map: {0:.3f}.', textFileIndex + 1, textFilesCount)
-
-    log.lineBreak()
-
-    wordFrequencyMap = sorted(wordFrequencyMap.items(), key=lambda item: item[1], reverse=True)
-    wordFrequencyMap = collections.OrderedDict(wordFrequencyMap)
-
-    for textFileIndex, textFilePath in enumerate(textFilePaths):
-        with open(textFilePath, 'r') as textFile:
-            text = textFile.read()
-            text = subsampleAndPrune(text, wordFrequencyMap, sample, minCount)
-
-            fileName = os.path.basename(textFilePath)
-            weededFilePath = os.path.join(outputDirectoryPath, fileName)
-
-            with open(weededFilePath, 'w+') as weededFile:
-                weededFile.write(text)
+        with open(weededFilePath, 'w+') as weededFile:
+            weededFile.write(text)
 
         log.progress('Pruning and subsampling: {0:.3f}.', textFileIndex + 1, textFilesCount)
 
@@ -103,12 +99,16 @@ def launch(pathTo, hyper):
         inputDirectoryPath = pathTo.extractedDir,
         outputDirectoryPath = pathTo.weededDir,
         sample = hyper.sample,
-        minCount = hyper.minCount
+        minCount = hyper.minCount,
+        connector = hyper.connector
     )
 
 if __name__ == '__main__':
     pathTo = kit.PathTo('Cockatoo', experiment='default', w2vEmbeddings='wiki_full_s800_w10_mc20_hs1.bin')
-    hyper = parameters.HyperParameters(sample=1e1, minCount=2)
+    hyper = parameters.HyperParameters(
+        sample=1e1,
+        minCount=2,
+        connector=connectors.TextFilesConnector(pathTo.dataSetDir))
 
     launch(pathTo, hyper)
 
