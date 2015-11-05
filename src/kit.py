@@ -36,6 +36,7 @@ class PathTo:
         self.fileIndexMap = join(self.parametersDir, 'file_index_map.bin')
         self.fileEmbeddings = join(self.parametersDir, 'file_embeddings.bin')
         self.wordIndexMap = join(self.parametersDir, 'word_index_map.bin')
+        self.wordFrequencyMap = join(self.parametersDir, 'word_frequency_map.bin')
         self.wordEmbeddings = join(self.parametersDir, 'word_embeddings.bin')
         self.weights = join(self.parametersDir, 'weights.bin')
         self.w2vEmbeddings = join(self.w2vEmbeddingsDir, self.w2vEmbeddings)

@@ -130,6 +130,8 @@ class ImdbConnector:
             pathName = dir + '/*.txt'
             self.textFilesPaths += glob.glob(pathName)
 
+        self.textFilesPaths = self.textFilesPaths[:1000]
+
 
     def count(self):
         return len(self.textFilesPaths)

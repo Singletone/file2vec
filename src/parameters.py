@@ -73,7 +73,7 @@ class HyperParameters:
         self.learningRate = learningRate
 
 
-def dumpIndexMap(indexMap, indexMapFilePath):
+def dumpWordMap(indexMap, indexMapFilePath):
     if os.path.exists(indexMapFilePath):
         os.remove(indexMapFilePath)
 
@@ -91,14 +91,14 @@ def dumpIndexMap(indexMap, indexMapFilePath):
             binary.writei(indexMapFile, index)
 
             itemIndex += 1
-            log.progress('Dumping index map: {0:.3f}%.', itemIndex, indexMapSize)
+            log.progress('Dumping word map: {0:.3f}%.', itemIndex, indexMapSize)
 
         indexMapFile.flush()
 
         log.lineBreak()
 
 
-def loadIndexMap(indexMapFilePath, inverse=False):
+def loadWordMap(indexMapFilePath, inverse=False):
     vocabulary = {}
 
     with open(indexMapFilePath, 'rb') as indexMapFile:
@@ -114,7 +114,7 @@ def loadIndexMap(indexMapFilePath, inverse=False):
             else:
                 vocabulary[word] = index
 
-            log.progress('Loading index map: {0:.3f}%.', itemIndex + 1, itemsCount)
+            log.progress('Loading word map: {0:.3f}%.', itemIndex + 1, itemsCount)
 
         log.info('Loading index map complete. {0} items loaded.', itemsCount)
 
@@ -125,7 +125,9 @@ def dumpEmbeddings(embeddings, embeddingsFilePath):
     if os.path.exists(embeddingsFilePath):
         os.remove(embeddingsFilePath)
 
-    embeddings = numpy.asarray(embeddings)
+    if not isinstance(embeddings, numpy.ndarray):
+        embeddings = numpy.asarray(embeddings)
+
     embeddingsCount, embeddingSize = embeddings.shape
 
     with open(embeddingsFilePath, 'w') as embeddingsFile:
@@ -199,5 +201,5 @@ def loadW2VParameters(filePath, loadEmbeddings=True):
             log.progress('Loading W2V embeddings: {0:.3f}%. {1} embeddings {2} features each.',
                          embeddingIndex,
                          embeddingsCount,
-                         embeddingsCount,
+                         embeddingIndex,
                          embeddingSize)

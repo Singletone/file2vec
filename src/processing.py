@@ -12,11 +12,16 @@ import parameters
 import binary
 
 
+spacePattern = re.compile('\s+')
+dotPattern = re.compile('\.')
+
+
 class WordContextProvider:
-    def __init__(self, text=None, textFilePath=None, chunkSize=1073741824): # 1Mb as defeault buffer size
+    def __init__(self, text=None, textFilePath=None, chunkSize=1073741824, count=1): # 1Mb as defeault buffer size
         self.text = text
         self.textFile = None
         self.chunkSize = chunkSize
+        self.count = count
 
         if textFilePath is not None:
             self.textFile = open(textFilePath)
@@ -27,45 +32,57 @@ class WordContextProvider:
             self.textFile.close()
 
 
-    def iterate(self, contextSize):
-        if self.textFile is not None:
-            chunk = self.textFile.read(self.chunkSize)
-        else:
-            chunk = self.text
+    def iterate(self, size):
+        global spacePattern
+        global dotPattern
 
-        tail = ''
-
-        while chunk != '':
-            chunk = tail + chunk
-            chunk = re.split('\.', chunk)
-
-            tail = chunk[-1]
-
-            for sentence in chunk[:-1]:
-                sentence = sentence.strip()
-                words = re.split('\s+', sentence)
-
-                for wordIndex in range(len(words) - contextSize + 1):
-                    window = words[wordIndex: wordIndex + contextSize]
-
-                    yield window
-
-            words = re.split('\s+', tail.lstrip())
-
+        while self.count > 0:
             if self.textFile is not None:
                 chunk = self.textFile.read(self.chunkSize)
             else:
-                chunk = ''
+                chunk = self.text
 
-            if len(words) > contextSize * 2 - 1 or chunk == '':
-                if chunk != '':
-                    tail = ' '.join(words[-contextSize:])
-                    words = words[:-contextSize]
+            tail = ''
 
-                for wordIndex in range(len(words) - contextSize + 1):
-                    window = words[wordIndex: wordIndex + contextSize]
+            while chunk != '':
+                chunk = tail + chunk
+                chunk = dotPattern.split(chunk)
 
-                    yield window
+                tail = chunk[-1]
+
+                for sentence in chunk[:-1]:
+                    sentence = sentence.strip()
+                    words = spacePattern.split(sentence)
+
+                    for wordIndex in range(len(words) - size + 1):
+                        window = words[wordIndex: wordIndex + size]
+
+                        yield window
+
+                        self.count -= 1
+                        if self.count == 0:
+                            return
+
+                words = spacePattern.split(tail.lstrip())
+
+                if self.textFile is not None:
+                    chunk = self.textFile.read(self.chunkSize)
+                else:
+                    chunk = ''
+
+                if len(words) > size * 2 - 1 or chunk == '':
+                    if chunk != '':
+                        tail = ' '.join(words[-size:])
+                        words = words[:-size]
+
+                    for wordIndex in range(len(words) - size + 1):
+                        window = words[wordIndex: wordIndex + size]
+
+                        yield window
+
+                        self.count -= 1
+                        if self.count == 0:
+                            return
 
 
 def generateNegativeSamples(negative, contexts, wordIndexMap, strict=False):
@@ -194,8 +211,8 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
 
             os.remove(noNegativeSamplingPath)
 
-    parameters.dumpIndexMap(fileIndexMap, fileIndexMapFilePath)
-    parameters.dumpIndexMap(wordIndexMap, wordIndexMapFilePath)
+    parameters.dumpWordMap(fileIndexMap, fileIndexMapFilePath)
+    parameters.dumpWordMap(wordIndexMap, wordIndexMapFilePath)
     parameters.dumpEmbeddings(wordEmbeddings, wordEmbeddingsFilePath)
 
 

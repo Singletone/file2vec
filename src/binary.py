@@ -1,4 +1,6 @@
 import struct
+import operator
+import functools
 import numpy as np
 
 
@@ -47,22 +49,26 @@ def writes(file, buffer):
     file.write(buffer)
 
 
-def dumpMatrix(path, matrix):
-    rows, columns = matrix.shape
-    values = np.asarray(matrix).flatten()
+def dumpTensor(path, tensor):
+    tensor = np.asarray(tensor)
+
+    shape = list(tensor.shape)
+    dimensions = len(shape)
+
+    values = np.asarray(tensor).flatten()
 
     with open(path, 'wb+') as file:
-        writei(file, rows)
-        writei(file, columns)
+        writei(file, dimensions)
+        writei(file, shape)
         writef(file, values)
 
 
-def loadMatrix(path):
+def loadTensor(path):
     with open(path, 'rb') as file:
-        rows = readi(file)
-        columns = readi(file)
-        count = rows * columns
+        dimensions = readi(file)
+        shape = readi(file, dimensions)
+        count = functools.reduce(operator.mul, shape, 1)
         values = readf(file, count)
-        matrix = np.reshape(values, (rows, columns))
+        matrix = np.reshape(values, shape)
 
         return matrix

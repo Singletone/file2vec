@@ -86,17 +86,17 @@ class Model:
 
     def dump(self, fileEmbeddingsPath, weightsPath):
         fileEmbeddings = self.fileEmbeddings.get_value()
-        binary.dumpMatrix(fileEmbeddingsPath, fileEmbeddings)
+        binary.dumpTensor(fileEmbeddingsPath, fileEmbeddings)
 
         weights = self.weights.get_value()
-        binary.dumpMatrix(weightsPath, weights)
+        binary.dumpTensor(weightsPath, weights)
 
 
     @staticmethod
     def load(fileEmbeddingsPath, wordEmbeddingsPath, weightsPath):
-        fileEmbeddings = binary.loadMatrix(fileEmbeddingsPath)
-        wordEmbeddings = binary.loadMatrix(wordEmbeddingsPath)
-        weights = binary.loadMatrix(weightsPath)
+        fileEmbeddings = binary.loadTensor(fileEmbeddingsPath)
+        wordEmbeddings = binary.loadTensor(wordEmbeddingsPath)
+        weights = binary.loadTensor(weightsPath)
 
         return Model(fileEmbeddings, wordEmbeddings, weights)
 
@@ -150,10 +150,10 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPa
 
 
 def launch(pathTo, hyper):
-    fileIndexMap = parameters.loadIndexMap(pathTo.fileIndexMap)
+    fileIndexMap = parameters.loadWordMap(pathTo.fileIndexMap)
     filesCount = len(fileIndexMap)
     fileEmbeddingSize = hyper.fileEmbeddingSize
-    wordIndexMap = parameters.loadIndexMap(pathTo.wordIndexMap)
+    wordIndexMap = parameters.loadWordMap(pathTo.wordIndexMap)
     wordEmbeddings = parameters.loadEmbeddings(pathTo.wordEmbeddings)
     metricsPath = pathTo.metrics('history.csv')
 

@@ -35,6 +35,9 @@ def subsampleAndPrune(text, wordFrequencyMap, sample, minCount):
         words = []
 
         for word in iterateWords(sentence):
+            if word not in wordFrequencyMap:
+                continue
+
             wordFrequency = wordFrequencyMap[word]
             wordSample = numpy.random.random()
 
