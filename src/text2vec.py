@@ -77,7 +77,7 @@ def subsampleAndPrune(texts, wordFrequencyMap, sample, minCount):
 
         prunedLength += len(texts[textIndex])
 
-        log.progress('Subsampling and pruning text: {0:.3f}%. Removed {0:.3f}% of original text.',
+        log.progress('Subsampling and pruning text: {0:.3f}%. Removed {1:.3f}% of original text.',
                      textIndex + 1,
                      len(texts),
                      (1 - prunedLength/totalLength) * 100)
@@ -94,14 +94,19 @@ def inferContexts(texts, wordIndexMap, windowSize, negative, strict):
         indices = map(lambda word: wordIndexMap[word], textContext)
         return indices
 
+    print 'Reading contexts:'
+
     for textIndex, text in enumerate(texts):
+        print '-----------'
+        print text
+
         contextProvider = processing.WordContextProvider(text, count=600)
         textContexts = list(contextProvider.iterate(windowSize))
 
         textContexts = map(wordsToIndices, textContexts)
         contexts.append(textContexts)
 
-        log.progress('Creating contexts: {0:.3f}%.', textIndex + 1, len(texts))
+        # log.progress('Creating contexts: {0:.3f}%. Current text: {1}.', textIndex + 1, len(texts))
 
     log.lineBreak()
 
@@ -110,6 +115,7 @@ def inferContexts(texts, wordIndexMap, windowSize, negative, strict):
 
 def trainTextVectors(connector, w2vEmbeddingsPath, wordIndexMapPath, wordFrequencyMapPath, wordEmbeddingsPath, contextsPath,
                      sample, minCount, windowSize, negative, strict):
+    names = []
     texts = []
 
     if exists(wordIndexMapPath) and exists(wordFrequencyMapPath) and exists(wordEmbeddingsPath):
@@ -124,14 +130,14 @@ def trainTextVectors(connector, w2vEmbeddingsPath, wordIndexMapPath, wordFrequen
         names, texts = extract(connector)
         wordIndexMap, wordFrequencyMap, wordEmbeddings = buildWordMaps(texts, w2vWordIndexMap, w2vWordEmbeddings)
 
-        parameters.dumpWordMap(wordIndexMap, wordIndexMapPath)
+        # parameters.dumpWordMap(wordIndexMap, wordIndexMapPath)
         del w2vWordIndexMap
         del w2vWordEmbeddings
         gc.collect()
 
         parameters.dumpWordMap(wordFrequencyMap, wordFrequencyMapPath)
 
-        parameters.dumpEmbeddings(wordEmbeddings, wordEmbeddingsPath)
+        # parameters.dumpEmbeddings(wordEmbeddings, wordEmbeddingsPath)
 
         log.info('Dumped indices, frequencies and embeddings')
 
@@ -169,7 +175,7 @@ if __name__ == '__main__':
     pathTo = kit.PathTo('IMDB', experiment='imdb', w2vEmbeddings='wiki_full_s1000_w10_mc20_hs1.bin')
     hyper = parameters.HyperParameters(
         connector = connectors.ImdbConnector(pathTo.dataSetDir),
-        sample=1e1,
+        sample=2e1,
         minCount=1,
         windowSize=3,
         negative=100,
