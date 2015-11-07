@@ -22,7 +22,6 @@ class WordContextProvider:
         self.textFile = None
         self.chunkSize = chunkSize
         self.count = count
-        self.noContextsFound = True
 
         if textFilePath is not None:
             self.textFile = open(textFilePath)
@@ -61,7 +60,6 @@ class WordContextProvider:
                         yield window
 
                         self.count -= 1
-                        self.noContextsFound = False
                         if self.count == 0:
                             return
 
@@ -83,7 +81,6 @@ class WordContextProvider:
                         yield window
 
                         self.count -= 1
-                        self.noContextsFound = False
                         if self.count == 0:
                             return
 
