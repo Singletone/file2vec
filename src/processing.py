@@ -91,8 +91,6 @@ class WordContextProvider:
                 return
 
 
-
-
 def generateNegativeSamples(negative, contexts, wordIndices, maxWordIndex, strict=False):
     if strict:
         negativeSamples = numpy.zeros((contexts.shape[0], negative))
