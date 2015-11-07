@@ -89,7 +89,7 @@ def subsampleAndPrune(texts, wordFrequencyMap, sample, minCount):
     return texts
 
 
-def inferContexts(contextsPath, names, texts, wordIndexMap, windowSize, negative, strict, minContexts, maxContexts):
+def inferContexts(contextsPath, names, texts, wordIndexMap, windowSize, negative, strict, contextsCount):
     textIndexMap = collections.OrderedDict()
 
     def wordsToIndices(textContext):
@@ -101,33 +101,32 @@ def inferContexts(contextsPath, names, texts, wordIndexMap, windowSize, negative
     maxWordIndex = max(wordIndices)
 
     with open(contextsPath, 'wb+') as contextsFile:
-        binary.writei(contextsFile, 0)
+        binary.writei(contextsFile, 0) # placeholder for texts count
+        binary.writei(contextsFile, contextsCount)
         binary.writei(contextsFile, windowSize)
         binary.writei(contextsFile, negative)
 
-        textIndex = 0
-        contextsCount = 0
+        textsCount = 0
         for name, text in zip(names, texts):
-            contextProvider = processing.WordContextProvider(text=text, minContexts=minContexts, maxContexts=maxContexts)
+            contextProvider = processing.WordContextProvider(text=text, minContexts=contextsCount, maxContexts=contextsCount)
             contexts = list(contextProvider.iterate(windowSize))
 
             if len(contexts) > 0:
                 contexts = map(wordsToIndices, contexts)
                 textIndexMap[name] = len(textIndexMap)
                 contexts = numpy.asarray(contexts)
-                contextsCount += len(contexts)
 
                 contexts = processing.generateNegativeSamples(negative, contexts, wordIndices, maxWordIndex, strict)
                 contexts = numpy.ravel(contexts)
 
                 binary.writei(contextsFile, contexts)
 
-            textIndex += 1
+            textsCount += 1
             log.progress('Creating contexts: {0:.3f}%. Text index map: {1}. Contexts: {2}.',
-                         textIndex, len(texts), len(textIndexMap), contextsCount)
+                         textsCount, len(texts), len(textIndexMap), textsCount * contextsCount)
 
         contextsFile.seek(0, io.SEEK_SET)
-        binary.writei(contextsFile, contextsCount)
+        binary.writei(contextsFile, textsCount)
         contextsFile.flush()
 
     log.lineBreak()
@@ -166,7 +165,7 @@ def trainTextVectors(connector, w2vEmbeddingsPath, wordIndexMapPath, wordFrequen
 
         texts = subsampleAndPrune(texts, wordFrequencyMap, sample, minCount)
 
-        textIndexMap = inferContexts(contextsPath, names, texts, wordIndexMap, windowSize, negative, strict, 600, 600)
+        textIndexMap = inferContexts(contextsPath, names, texts, wordIndexMap, windowSize, negative, strict, 600)
 
         parameters.dumpWordMap(textIndexMap, pathTo.textIndexMap)
 
