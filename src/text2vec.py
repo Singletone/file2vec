@@ -100,7 +100,7 @@ def inferContexts(texts, wordIndexMap, windowSize, negative, strict):
         print '-----------'
         print text
 
-        contextProvider = processing.WordContextProvider(text, count=600)
+        contextProvider = processing.WordContextProvider(text=text, minContexts=600)
         textContexts = list(contextProvider.iterate(windowSize))
 
         textContexts = map(wordsToIndices, textContexts)

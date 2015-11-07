@@ -17,11 +17,12 @@ dotPattern = re.compile('\.')
 
 
 class WordContextProvider:
-    def __init__(self, text=None, textFilePath=None, chunkSize=1073741824, count=1): # 1Mb as defeault buffer size
+    def __init__(self, text=None, textFilePath=None, chunkSize=1073741824, minContexts=None): # 1Mb as defeault buffer size
         self.text = text
         self.textFile = None
         self.chunkSize = chunkSize
-        self.count = count
+        self.minContexts = minContexts
+        self.counter = 0
 
         if textFilePath is not None:
             self.textFile = open(textFilePath)
@@ -36,7 +37,8 @@ class WordContextProvider:
         global spacePattern
         global dotPattern
 
-        while self.count > 0:
+        while (self.minContexts is not None and self.counter < self.minContexts) \
+                or (self.counter < 1):
             if self.textFile is not None:
                 chunk = self.textFile.read(self.chunkSize)
             else:
@@ -59,8 +61,8 @@ class WordContextProvider:
 
                         yield window
 
-                        self.count -= 1
-                        if self.count == 0:
+                        self.counter -= 1
+                        if self.counter == 0:
                             return
 
                 words = spacePattern.split(tail.lstrip())
@@ -80,9 +82,14 @@ class WordContextProvider:
 
                         yield window
 
-                        self.count -= 1
-                        if self.count == 0:
+                        self.counter -= 1
+                        if self.counter == 0:
                             return
+
+            if self.counter == 0:
+                return
+
+
 
 
 def generateNegativeSamples(negative, contexts, wordIndexMap, strict=False):

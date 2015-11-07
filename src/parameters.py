@@ -123,9 +123,10 @@ def loadWordMap(indexMapFilePath, inverse=False):
 
 
 def loadWordRequencyMap(indexMapFilePath):
+    wordRequencyMap = loadWordMap(indexMapFilePath)
+
     log.progress('Sorting word frequency map...', 1, 1)
 
-    wordRequencyMap = loadWordMap(indexMapFilePath)
     wordRequencyMap = sorted(wordRequencyMap.items(), key=lambda item: item[1], reverse=True)
     wordRequencyMap = collections.OrderedDict(wordRequencyMap)
 
