@@ -28,6 +28,12 @@ def iterateWords(text):
                 yield word
 
 
+def doPruning(word, wordFrequencyMap, sample):
+    maxFrequency = wordFrequencyMap.items()[0][1]
+    wordRrequency = wordFrequencyMap[word]
+
+    return numpy.random.random() < wordRrequency / maxFrequency / sample
+
 def subsampleAndPrune(text, wordFrequencyMap, sample, minCount):
     sentences = []
 
@@ -39,9 +45,8 @@ def subsampleAndPrune(text, wordFrequencyMap, sample, minCount):
                 continue
 
             wordFrequency = wordFrequencyMap[word]
-            wordSample = numpy.random.random()
 
-            if word in wordFrequencyMap and wordSample > (1 - math.sqrt(sample/wordFrequency)) and wordFrequency >= minCount:
+            if word in wordFrequencyMap and not doPruning(word, wordFrequencyMap, sample) and wordFrequency >= minCount:
                 words.append(word)
 
         if len(words) > 0:
@@ -109,7 +114,7 @@ def launch(pathTo, hyper):
 if __name__ == '__main__':
     pathTo = kit.PathTo('Cockatoo', experiment='default', w2vEmbeddings='wiki_full_s800_w10_mc20_hs1.bin')
     hyper = parameters.HyperParameters(
-        sample=1e1,
+        sample=0.3,
         minCount=2,
         connector=connectors.TextFilesConnector(pathTo.dataSetDir))
 

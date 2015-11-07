@@ -1,8 +1,15 @@
-import processing
+import kit
+import parameters
+import extraction
+import weeding
 
-text = 'robotboy found episode show teach behave. main.'
+pathTo = kit.PathTo('IMDB', 'imdb')
+wordFrequencyMap = parameters.loadWordRequencyMap(pathTo.wordFrequencyMap)
 
-contextProvider = processing.WordContextProvider(text, count=600)
+text = 'I love that they have kept the original style of the site and only changed little details over the years.'
+text = extraction.clean(text)
 
-for context in contextProvider.iterate(3):
-    print context
+sample = 0.3
+
+print text
+print weeding.subsampleAndPrune(text, wordFrequencyMap, sample, 5)

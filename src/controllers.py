@@ -25,7 +25,7 @@ if __name__ == '__main__':
     pathTo = kit.PathTo('Cockatoo', experiment='default', w2vEmbeddings='wiki_full_s1000_w10_mc20_hs1.bin')
     hyper = parameters.HyperParameters(
         connector = connectors.TextFilesConnector(pathTo.dataSetDir),
-        sample=1e1,
+        sample=0.3,
         minCount=1,
         windowSize=3,
         negative=100,

@@ -1,6 +1,7 @@
 import os
 import io
 import numpy
+import collections
 
 import log
 import binary
@@ -119,6 +120,19 @@ def loadWordMap(indexMapFilePath, inverse=False):
         log.info('Loading index map complete. {0} items loaded.', itemsCount)
 
     return vocabulary
+
+
+def loadWordRequencyMap(indexMapFilePath):
+    log.progress('Sorting word frequency map...', 1, 1)
+
+    wordRequencyMap = loadWordMap(indexMapFilePath)
+    wordRequencyMap = sorted(wordRequencyMap.items(), key=lambda item: item[1], reverse=True)
+    wordRequencyMap = collections.OrderedDict(wordRequencyMap)
+
+    log.progress('Sorting word frequency map complete.', 1, 1)
+    log.lineBreak()
+
+    return wordRequencyMap
 
 
 def dumpEmbeddings(embeddings, embeddingsFilePath):
