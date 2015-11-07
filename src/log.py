@@ -18,7 +18,11 @@ def lineBreak():
     sys.stdout.flush()
 
 
-def progress(messageFormat, index, count, *args):
+def progress(messageFormat, index=None, count=None, *args):
+    if index == None or count == None:
+        index = 1
+        count = 1
+
     maxFrequency = 10000
     body = count - count % maxFrequency
     maxFrequency = count / maxFrequency

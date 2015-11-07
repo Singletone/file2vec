@@ -33,7 +33,7 @@ class PathTo:
 
         self.concatenated = join(self.concatenatedDir, 'concatenated.txt')
         self.contexts = join(self.processedDir, 'contexts.bin')
-        self.fileIndexMap = join(self.parametersDir, 'file_index_map.bin')
+        self.textIndexMap = join(self.parametersDir, 'file_index_map.bin')
         self.fileEmbeddings = join(self.parametersDir, 'file_embeddings.bin')
         self.wordIndexMap = join(self.parametersDir, 'word_index_map.bin')
         self.wordFrequencyMap = join(self.parametersDir, 'word_frequency_map.bin')

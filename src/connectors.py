@@ -2,7 +2,8 @@ import os
 import glob
 import gzip
 import re
-import numpy
+import numpy as np
+import pandas as pd
 
 
 class TextFilesConnector:
@@ -29,10 +30,7 @@ class WikipediaConnector:
         pathName = inputDirectoryPath + '/*.txt.gz'
         self.dumpPaths = glob.glob(pathName)
 
-        numpy.random.seed(123)
-        numpy.random.shuffle(self.dumpPaths)
-
-        self.dumpPaths = self.dumpPaths[:2]
+        self.dumpPaths = self.dumpPaths[:10]
 
 
     @staticmethod
@@ -140,7 +138,37 @@ class ImdbConnector:
     def iterate(self):
         for textFileIndex, textFilePath in enumerate(self.textFilesPaths):
             with open(textFilePath, 'r') as textFile:
-                name = os.path.basename(textFilePath).split('.')[0]
                 text = textFile.read()
 
-                yield textFileIndex, name, text
+                yield textFileIndex, textFilePath, text
+
+
+class RottenTomatosConnector:
+    def __init__(self, inputDirectoryPath):
+        self.inputDirectoryPath = inputDirectoryPath
+
+        self.trainFilePath = os.path.join(self.inputDirectoryPath, 'train.tsv')
+        self.testFilePath = os.path.join(self.inputDirectoryPath, 'test.tsv')
+
+
+    def count(self):
+        trainSet = pd.read_csv(self.trainFilePath, sep='\t')
+        testSet = pd.read_csv(self.testFilePath, sep='\t')
+
+        dataSet = pd.concat([trainSet, testSet])
+        dataSet = dataSet.groupby('SentenceId').first()
+
+        return len(dataSet)
+
+
+    def iterate(self):
+        trainSet = pd.read_csv(self.trainFilePath, sep='\t')
+        testSet = pd.read_csv(self.testFilePath, sep='\t')
+
+        dataSet = pd.concat([trainSet, testSet])
+        dataSet = dataSet.groupby('SentenceId').first()
+
+        phraseIndex = 0
+        for phraseId, phrase in zip(dataSet['PhraseId'], dataSet['Phrase']):
+            yield phraseIndex, str(phraseId), phrase
+            phraseIndex += 1

@@ -17,11 +17,12 @@ dotPattern = re.compile('\.')
 
 
 class WordContextProvider:
-    def __init__(self, text=None, textFilePath=None, chunkSize=1073741824, minContexts=None): # 1Mb as defeault buffer size
+    def __init__(self, text=None, textFilePath=None, chunkSize=1073741824, minContexts=None, maxContexts=None): # 1Mb as defeault buffer size
         self.text = text
         self.textFile = None
         self.chunkSize = chunkSize
         self.minContexts = minContexts
+        self.maxContexts = maxContexts
         self.counter = 0
 
         if textFilePath is not None:
@@ -61,8 +62,8 @@ class WordContextProvider:
 
                         yield window
 
-                        self.counter -= 1
-                        if self.counter == 0:
+                        self.counter += 1
+                        if self.maxContexts is not None and self.counter >= self.maxContexts:
                             return
 
                 words = spacePattern.split(tail.lstrip())
@@ -82,8 +83,8 @@ class WordContextProvider:
 
                         yield window
 
-                        self.counter -= 1
-                        if self.counter == 0:
+                        self.counter += 1
+                        if self.maxContexts is not None and self.counter >= self.maxContexts:
                             return
 
             if self.counter == 0:
@@ -92,11 +93,7 @@ class WordContextProvider:
 
 
 
-def generateNegativeSamples(negative, contexts, wordIndexMap, strict=False):
-    wordIndices = map(lambda item: item[1], wordIndexMap.items())
-    wordIndices = numpy.asarray(wordIndices)
-    highWordIndex = max(wordIndices)
-
+def generateNegativeSamples(negative, contexts, wordIndices, maxWordIndex, strict=False):
     if strict:
         negativeSamples = numpy.zeros((contexts.shape[0], negative))
         for contextIndex in xrange(0, contexts.shape[0]):
@@ -104,7 +101,7 @@ def generateNegativeSamples(negative, contexts, wordIndexMap, strict=False):
             numpy.random.shuffle(prunedWordIndices)
             negativeSamples[contextIndex] = prunedWordIndices[:negative]
     else:
-        negativeSamples = numpy.random.randint(0, high=highWordIndex+1, size=contexts.shape[0]*negative)
+        negativeSamples = numpy.random.randint(0, high=maxWordIndex + 1, size=contexts.shape[0] * negative)
         negativeSamples = negativeSamples.reshape((contexts.shape[0], negative))
 
     return negativeSamples
@@ -197,9 +194,13 @@ def processData(inputDirectoryPath, w2vEmbeddingsFilePath, fileIndexMapFilePath,
             batchSize = 10000
             batchesCount = contextsCount / batchSize + 1
 
+            wordIndices = map(lambda item: item[1], wordIndexMap.items())
+            wordIndices = numpy.asarray(wordIndices)
+            maxWordIndex = max(wordIndices)
+
             for batchIndex in xrange(0, batchesCount):
                 contexts = contextProvider[batchIndex * batchSize : (batchIndex + 1) * batchSize]
-                negativeSamples = generateNegativeSamples(negative, contexts, wordIndexMap, strict)
+                negativeSamples = generateNegativeSamples(negative, contexts, wordIndices, maxWordIndex, strict)
                 contexts = numpy.concatenate([contexts, negativeSamples], axis=1)
                 contexts = numpy.ravel(contexts)
 

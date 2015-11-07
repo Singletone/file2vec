@@ -1,8 +1,8 @@
 import collections
 from os.path import exists
 import gc
-import time
 import numpy
+import io
 
 import connectors
 import extraction
@@ -55,11 +55,11 @@ def buildWordMaps(texts, w2vWordIndexMap, w2vWordEmbeddings):
     log.lineBreak()
 
     wordEmbeddings = numpy.zeros((len(wordIndexMap), w2vWordEmbeddings.shape[1]))
-    for wirdIndexPair in wordIndexMap.items():
-        word, index = wirdIndexPair
+    for wordIndexPair in wordIndexMap.items():
+        word, index = wordIndexPair
         wordEmbeddings[index] = w2vWordEmbeddings[index]
 
-        log.progress('Copying word w2v embeddings: {0:.3f}%.', index + 1, len(wordIndexMap))
+        log.progress('Copying w2v embeddings: {0:.3f}%.', index + 1, len(wordIndexMap))
 
     log.lineBreak()
 
@@ -70,10 +70,12 @@ def subsampleAndPrune(texts, wordFrequencyMap, sample, minCount):
     totalLength = 0.
     prunedLength = 0.
 
+    maxFrequency = wordFrequencyMap.items()[0][1]
+
     for textIndex, text in enumerate(texts):
         totalLength += len(text)
 
-        texts[textIndex] = weeding.subsampleAndPrune(text, wordFrequencyMap, sample, minCount)
+        texts[textIndex] = weeding.subsampleAndPrune(text, wordFrequencyMap, maxFrequency, sample, minCount)
 
         prunedLength += len(texts[textIndex])
 
@@ -87,72 +89,87 @@ def subsampleAndPrune(texts, wordFrequencyMap, sample, minCount):
     return texts
 
 
-def inferContexts(texts, wordIndexMap, windowSize, negative, strict):
-    contexts = []
+def inferContexts(contextsPath, names, texts, wordIndexMap, windowSize, negative, strict, minContexts, maxContexts):
+    textIndexMap = collections.OrderedDict()
 
     def wordsToIndices(textContext):
         indices = map(lambda word: wordIndexMap[word], textContext)
         return indices
 
-    print 'Reading contexts:'
+    wordIndices = map(lambda item: item[1], wordIndexMap.items())
+    wordIndices = numpy.asarray(wordIndices)
+    maxWordIndex = max(wordIndices)
 
-    for textIndex, text in enumerate(texts):
-        print '-----------'
-        print text
+    with open(contextsPath, 'wb+') as contextsFile:
+        binary.writei(contextsFile, 0)
+        binary.writei(contextsFile, windowSize)
+        binary.writei(contextsFile, negative)
 
-        contextProvider = processing.WordContextProvider(text=text, minContexts=600)
-        textContexts = list(contextProvider.iterate(windowSize))
+        textIndex = 0
+        contextsCount = 0
+        for name, text in zip(names, texts):
+            contextProvider = processing.WordContextProvider(text=text, minContexts=minContexts, maxContexts=maxContexts)
+            contexts = list(contextProvider.iterate(windowSize))
 
-        textContexts = map(wordsToIndices, textContexts)
-        contexts.append(textContexts)
+            if len(contexts) > 0:
+                contexts = map(wordsToIndices, contexts)
+                textIndexMap[name] = len(textIndexMap)
+                contexts = numpy.asarray(contexts)
+                contextsCount += len(contexts)
 
-        # log.progress('Creating contexts: {0:.3f}%. Current text: {1}.', textIndex + 1, len(texts))
+                contexts = processing.generateNegativeSamples(negative, contexts, wordIndices, maxWordIndex, strict)
+                contexts = numpy.ravel(contexts)
+
+                binary.writei(contextsFile, contexts)
+
+            textIndex += 1
+            log.progress('Creating contexts: {0:.3f}%. Text index map: {1}. Contexts: {2}.',
+                         textIndex, len(texts), len(textIndexMap), contextsCount)
+
+        contextsFile.seek(0, io.SEEK_SET)
+        binary.writei(contextsFile, contextsCount)
+        contextsFile.flush()
 
     log.lineBreak()
 
-    return contexts
+    return textIndexMap
 
 
 def trainTextVectors(connector, w2vEmbeddingsPath, wordIndexMapPath, wordFrequencyMapPath, wordEmbeddingsPath, contextsPath,
                      sample, minCount, windowSize, negative, strict):
-    names = []
-    texts = []
-
-    if exists(wordIndexMapPath) and exists(wordFrequencyMapPath) and exists(wordEmbeddingsPath):
-        wordIndexMap = parameters.loadWordMap(wordIndexMapPath)
-        wordFrequencyMap = parameters.loadWordMap(wordFrequencyMapPath)
+    if exists(wordIndexMapPath) and exists(wordFrequencyMapPath) and exists(wordEmbeddingsPath) \
+            and exists(contextsPath) and exists(pathTo.textIndexMap):
+        wordIndexMap = parameters.loadMap(wordIndexMapPath)
+        wordFrequencyMap = parameters.loadMap(wordFrequencyMapPath)
         wordEmbeddings = parameters.loadEmbeddings(wordEmbeddingsPath)
+        textIndexMap = parameters.loadMap(pathTo.textIndexMap)
 
-        log.info('Loaded indices, frequencies and embeddings')
+        log.progress('Loading contexts...')
+        contexts = binary.loadTensor(contextsPath)
+        log.info('Loaded {0} contexts.', len(contexts))
     else:
         w2vWordIndexMap, w2vWordEmbeddings = parameters.loadW2VParameters(w2vEmbeddingsPath)
 
         names, texts = extract(connector)
         wordIndexMap, wordFrequencyMap, wordEmbeddings = buildWordMaps(texts, w2vWordIndexMap, w2vWordEmbeddings)
 
-        # parameters.dumpWordMap(wordIndexMap, wordIndexMapPath)
+        parameters.dumpWordMap(wordIndexMap, wordIndexMapPath)
         del w2vWordIndexMap
         del w2vWordEmbeddings
         gc.collect()
 
         parameters.dumpWordMap(wordFrequencyMap, wordFrequencyMapPath)
 
-        # parameters.dumpEmbeddings(wordEmbeddings, wordEmbeddingsPath)
-
+        log.progress('Dumping contexts...')
+        parameters.dumpEmbeddings(wordEmbeddings, wordEmbeddingsPath)
         log.info('Dumped indices, frequencies and embeddings')
 
-    if exists(contextsPath):
-        contexts = binary.loadTensor(contextsPath)
-
-        log.info('Loaded contexts')
-    else:
         texts = subsampleAndPrune(texts, wordFrequencyMap, sample, minCount)
 
-        contexts = inferContexts(texts, wordIndexMap, windowSize, negative, strict)
+        textIndexMap = inferContexts(contextsPath, names, texts, wordIndexMap, windowSize, negative, strict, 600, 600)
 
-        log.progress('Dumping contexts...', 1, 1)
-        binary.dumpTensor(contextsPath, contexts)
-        log.info('Dumping contexts complete.')
+        parameters.dumpWordMap(textIndexMap, pathTo.textIndexMap)
+
 
 
 def launch(pathTo, hyper):
@@ -172,13 +189,13 @@ def launch(pathTo, hyper):
 
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('IMDB', experiment='imdb', w2vEmbeddings='wiki_full_s1000_w10_mc20_hs1.bin')
+    pathTo = kit.PathTo('IMDB', experiment='imdb', w2vEmbeddings='mojito_s300_w3_mc5_hs1.bin')
     hyper = parameters.HyperParameters(
         connector = connectors.ImdbConnector(pathTo.dataSetDir),
-        sample=2e1,
+        threshold=1e-3,
         minCount=1,
         windowSize=3,
-        negative=100,
+        negative=10,
         strict=False,
         fileEmbeddingSize=1000,
         epochs=10,

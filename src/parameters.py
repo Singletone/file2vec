@@ -60,10 +60,10 @@ class IndexContextProvider:
 
 
 class HyperParameters:
-    def __init__(self, connector=None, sample=1e1, minCount=2, windowSize=7,
+    def __init__(self, connector=None, threshold=1e1, minCount=2, windowSize=7,
                  negative=100, strict=False, fileEmbeddingSize=800, epochs=20, batchSize=1, learningRate=0.01):
         self.connector = connector
-        self.sample = sample
+        self.sample = threshold
         self.minCount = minCount
         self.windowSize = windowSize
         self.negative = negative
@@ -92,14 +92,14 @@ def dumpWordMap(indexMap, indexMapFilePath):
             binary.writei(indexMapFile, index)
 
             itemIndex += 1
-            log.progress('Dumping word map: {0:.3f}%.', itemIndex, indexMapSize)
+            log.progress('Dumping map: {0:.3f}%.', itemIndex, indexMapSize)
 
         indexMapFile.flush()
 
         log.lineBreak()
 
 
-def loadWordMap(indexMapFilePath, inverse=False):
+def loadMap(indexMapFilePath, inverse=False):
     vocabulary = {}
 
     with open(indexMapFilePath, 'rb') as indexMapFile:
@@ -123,7 +123,7 @@ def loadWordMap(indexMapFilePath, inverse=False):
 
 
 def loadWordRequencyMap(indexMapFilePath):
-    wordRequencyMap = loadWordMap(indexMapFilePath)
+    wordRequencyMap = loadMap(indexMapFilePath)
 
     log.progress('Sorting word frequency map...', 1, 1)
 

@@ -32,7 +32,7 @@ def clean(text):
     sentences = re.split('[(\n{2,})\.;]', text)
     sentences = [re.sub('[\s]+', ' ', sentence).strip() for sentence in sentences]
     sentences = [sentence for sentence in sentences
-                 if len(sentence.split(' ')) > 5 and sentence.count('NUMBER') < 3]
+                 if len(sentence.split(' ')) > 2 and sentence.count('NUMBER') < 3]
 
     text = '. '.join(sentences) + '.'
 

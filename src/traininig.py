@@ -150,10 +150,10 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPa
 
 
 def launch(pathTo, hyper):
-    fileIndexMap = parameters.loadWordMap(pathTo.fileIndexMap)
+    fileIndexMap = parameters.loadMap(pathTo.fileIndexMap)
     filesCount = len(fileIndexMap)
     fileEmbeddingSize = hyper.fileEmbeddingSize
-    wordIndexMap = parameters.loadWordMap(pathTo.wordIndexMap)
+    wordIndexMap = parameters.loadMap(pathTo.wordIndexMap)
     wordEmbeddings = parameters.loadEmbeddings(pathTo.wordEmbeddings)
     metricsPath = pathTo.metrics('history.csv')
 

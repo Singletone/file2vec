@@ -28,13 +28,14 @@ def iterateWords(text):
                 yield word
 
 
-def doPruning(word, wordFrequencyMap, sample):
-    maxFrequency = wordFrequencyMap.items()[0][1]
-    wordRrequency = wordFrequencyMap[word]
+def doPruning(word, wordFrequency, maxFrequency, threshold):
+    wordFrequency, maxFrequency = float(wordFrequency), float(maxFrequency)
+    yes = numpy.random.random() < threshold * wordFrequency / maxFrequency
 
-    return numpy.random.random() < wordRrequency / maxFrequency / sample
+    return yes
 
-def subsampleAndPrune(text, wordFrequencyMap, sample, minCount):
+
+def subsampleAndPrune(text, wordFrequencyMap, maxFrequency, threshold, minCount):
     sentences = []
 
     for sentence in iterateSentences(text):
@@ -46,7 +47,7 @@ def subsampleAndPrune(text, wordFrequencyMap, sample, minCount):
 
             wordFrequency = wordFrequencyMap[word]
 
-            if word in wordFrequencyMap and not doPruning(word, wordFrequencyMap, sample) and wordFrequency >= minCount:
+            if word in wordFrequencyMap and not doPruning(word, wordFrequency, maxFrequency, threshold) and wordFrequency >= minCount:
                 words.append(word)
 
         if len(words) > 0:
@@ -89,9 +90,10 @@ def weed(inputDirectoryPath, outputDirectoryPath, sample, minCount, connector):
     textFilesCount = connector.count()
 
     wordFrequencyMap = buildWordFrequencyMap(connector)
+    maxFrequency = wordFrequencyMap.items()[0][1]
 
     for textFileIndex, name, text in connector.iterate():
-        text = subsampleAndPrune(text, wordFrequencyMap, sample, minCount)
+        text = subsampleAndPrune(text, wordFrequencyMap, maxFrequency, sample, minCount)
         weededFilePath = os.path.join(outputDirectoryPath, name + '.txt')
 
         with open(weededFilePath, 'w+') as weededFile:
@@ -114,7 +116,7 @@ def launch(pathTo, hyper):
 if __name__ == '__main__':
     pathTo = kit.PathTo('Cockatoo', experiment='default', w2vEmbeddings='wiki_full_s800_w10_mc20_hs1.bin')
     hyper = parameters.HyperParameters(
-        sample=0.3,
+        threshold=0.3,
         minCount=2,
         connector=connectors.TextFilesConnector(pathTo.dataSetDir))
 
