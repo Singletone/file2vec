@@ -22,7 +22,7 @@ class DataPreparationController:
 
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('Cockatoo', experiment='cockatoo', w2vEmbeddings='wiki_full_s1000_w10_mc20_hs1.bin')
+    pathTo = kit.PathTo('Duplicates', experiment='duplicates', w2vEmbeddings='wiki_full_s1000_w10_mc20_hs1.bin')
     hyper = parameters.HyperParameters(
         connector = connectors.TextFilesConnector(pathTo.dataSetDir),
         threshold=2e-2,
@@ -33,7 +33,8 @@ if __name__ == '__main__':
         fileEmbeddingSize=1000,
         epochs=50,
         batchSize=1,
-        learningRate=0.025
+        learningRate=0.025,
+        contextsPerText=600
     )
 
     controller = DataPreparationController()

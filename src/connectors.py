@@ -10,6 +10,7 @@ class TextFilesConnector:
     def __init__(self, inputDirectoryPath):
         pathName = inputDirectoryPath + '/*.txt'
         self.textFilePaths = glob.glob(pathName)
+        self.textFilePaths = sorted(self.textFilePaths)
 
 
     def count(self):

@@ -12,8 +12,8 @@ import log
 import parameters
 import processing
 import weeding
-import traininig
 import binary
+import paralleltraininig
 
 batchSize = 10000
 
@@ -174,20 +174,19 @@ def trainTextVectors(connector, w2vEmbeddingsPath, wordIndexMapPath, wordFrequen
         log.info('Loaded {0} contexts. Shape: {1}', len(contexts), contexts.shape)
 
         fileEmbeddings = numpy.random.rand(len(contexts), fileEmbeddingSize).astype('float32')
-        trainingBatch = numpy.zeros((superBatchSize, contextsPerText, 1+windowSize+negative)).astype('float32')
+        trainingBatch = numpy.zeros((superBatchSize, contextsPerText, 1+windowSize+negative)).astype('int32')
         superBatchesCount = len(contexts) / superBatchSize
 
         for superBatchIndex in xrange(0, superBatchesCount):
             log.info('Text batch: {0}/{1}.', superBatchIndex + 1, superBatchesCount)
 
             contexts.read_direct(trainingBatch, source_sel=numpy.s_[superBatchIndex*superBatchSize:(superBatchIndex+1)*superBatchSize])
-            trainingBatch = trainingBatch.astype('int32')
-            trainingBatch = trainingBatch.reshape((superBatchSize*contextsPerText, 1+windowSize+negative))
+            trainingBatchReshaped = trainingBatch.reshape((superBatchSize*contextsPerText, 1+windowSize+negative))
 
             fileEmbeddingsBatch = fileEmbeddings[superBatchIndex*superBatchSize:(superBatchIndex+1)*superBatchSize]
 
             model = traininig.Model(fileEmbeddingsBatch, wordEmbeddings, contextSize=windowSize-2, negative=negative)
-            traininig.train(model, textIndexMap, wordIndexMap, wordEmbeddings, trainingBatch, epochs, 1, learningRate)
+            traininig.train(model, textIndexMap, wordIndexMap, wordEmbeddings, trainingBatchReshaped, epochs, 1, learningRate)
 
             fileEmbeddings[superBatchIndex*superBatchSize:(superBatchIndex+1)*superBatchSize] = model.fileEmbeddings.get_value()
             contextsFile.flush()
@@ -216,9 +215,9 @@ def launch(pathTo, hyper):
 
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('IMDB', experiment='imdb', w2vEmbeddings='mojito_s300_w3_mc5_hs1.bin')
+    pathTo = kit.PathTo('Duplicates', experiment='duplicates', w2vEmbeddings='wiki_full_s1000_w10_mc20_hs1.bin')
     hyper = parameters.HyperParameters(
-        connector = connectors.ImdbConnector(pathTo.dataSetDir),
+        connector = connectors.TextFilesConnector(pathTo.dataSetDir),
         threshold=1e-3,
         minCount=1,
         windowSize=3,
@@ -226,10 +225,10 @@ if __name__ == '__main__':
         strict=False,
         contextsPerText=600,
         fileEmbeddingSize=1000,
-        epochs=5,
+        epochs=2,
         batchSize=1,
         learningRate=0.025,
-        superBatchSize=5000
+        superBatchSize=25
     )
 
     launch(pathTo, hyper)
