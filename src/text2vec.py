@@ -2,7 +2,6 @@ import collections
 import gc
 import numpy
 from os.path import exists
-import time
 
 import h5py
 
@@ -13,6 +12,8 @@ import log
 import parameters
 import processing
 import weeding
+import traininig
+import binary
 
 batchSize = 10000
 
@@ -103,9 +104,9 @@ def inferContexts(contextsPath, names, texts, wordIndexMap, windowSize, negative
     with h5py.File(contextsPath, 'w') as contextsFile:
         tensor = contextsFile.create_dataset('contexts',
                                              dtype='int32',
-                                             shape=(0, contextsCount, windowSize + negative),
-                                             maxshape=(None, contextsCount, windowSize + negative),
-                                             chunks=(1, contextsCount, windowSize + negative))
+                                             shape=(0, contextsCount, 1 + windowSize + negative), # 1 for file index
+                                             maxshape=(None, contextsCount, 1 + windowSize + negative), # 1 for file index
+                                             chunks=(1, contextsCount, 1 + windowSize + negative)) # 1 for file index
 
         textsCount = 0
         for name, text in zip(names, texts):
@@ -116,6 +117,8 @@ def inferContexts(contextsPath, names, texts, wordIndexMap, windowSize, negative
                 contexts = map(wordsToIndices, contexts)
                 textIndexMap[name] = len(textIndexMap)
                 contexts = numpy.asarray(contexts)
+                textIndices = [[textIndexMap[name]]] * len(contexts)
+                contexts = numpy.concatenate([textIndices, contexts], axis=1)
 
                 negativeSamples = processing.generateNegativeSamples(negative, contexts, wordIndices, maxWordIndex, strict)
                 contexts = numpy.concatenate([contexts, negativeSamples], axis=1)
@@ -135,24 +138,14 @@ def inferContexts(contextsPath, names, texts, wordIndexMap, windowSize, negative
 
 
 def trainTextVectors(connector, w2vEmbeddingsPath, wordIndexMapPath, wordFrequencyMapPath, wordEmbeddingsPath, contextsPath,
-                     sample, minCount, windowSize, negative, strict):
+                     sample, minCount, windowSize, negative, strict, contextsPerText, superBatchSize, fileEmbeddingSize,
+                     epochs, learningRate, fileEmbeddingsPath):
     if exists(wordIndexMapPath) and exists(wordFrequencyMapPath) and exists(wordEmbeddingsPath) \
             and exists(contextsPath) and exists(pathTo.textIndexMap):
         wordIndexMap = parameters.loadMap(wordIndexMapPath)
         wordFrequencyMap = parameters.loadMap(wordFrequencyMapPath)
         wordEmbeddings = parameters.loadEmbeddings(wordEmbeddingsPath)
         textIndexMap = parameters.loadMap(pathTo.textIndexMap)
-
-        log.progress('Loading contexts...')
-        with h5py.File(contextsPath, 'r') as contextsFile:
-            contexts = contextsFile['contexts']
-            log.info('Loaded {0} contexts. Shape: {1}', len(contexts), contexts.shape)
-
-            log.progress('Reading training batch....')
-            trainingBatch = numpy.zeros((20000,600,windowSize+negative))
-            contexts.read_direct(trainingBatch, source_sel=numpy.s_[:20000,:,:])
-
-            log.info('Reading training batch complete. Shape: {0}', trainingBatch.shape)
     else:
         w2vWordIndexMap, w2vWordEmbeddings = parameters.loadW2VParameters(w2vEmbeddingsPath)
 
@@ -172,9 +165,36 @@ def trainTextVectors(connector, w2vEmbeddingsPath, wordIndexMapPath, wordFrequen
 
         texts = subsampleAndPrune(texts, wordFrequencyMap, sample, minCount)
 
-        textIndexMap = inferContexts(contextsPath, names, texts, wordIndexMap, windowSize, negative, strict, 600)
+        textIndexMap = inferContexts(contextsPath, names, texts, wordIndexMap, windowSize, negative, strict, contextsPerText)
 
         parameters.dumpWordMap(textIndexMap, pathTo.textIndexMap)
+
+    with h5py.File(contextsPath, 'r') as contextsFile:
+        contexts = contextsFile['contexts']
+        log.info('Loaded {0} contexts. Shape: {1}', len(contexts), contexts.shape)
+
+        fileEmbeddings = numpy.random.rand(len(contexts), fileEmbeddingSize).astype('float32')
+        trainingBatch = numpy.zeros((superBatchSize, contextsPerText, 1+windowSize+negative)).astype('float32')
+        superBatchesCount = len(contexts) / superBatchSize
+
+        for superBatchIndex in xrange(0, superBatchesCount):
+            log.info('Text batch: {0}/{1}.', superBatchIndex + 1, superBatchesCount)
+
+            contexts.read_direct(trainingBatch, source_sel=numpy.s_[superBatchIndex*superBatchSize:(superBatchIndex+1)*superBatchSize])
+            trainingBatch = trainingBatch.astype('int32')
+            trainingBatch = trainingBatch.reshape((superBatchSize*contextsPerText, 1+windowSize+negative))
+
+            fileEmbeddingsBatch = fileEmbeddings[superBatchIndex*superBatchSize:(superBatchIndex+1)*superBatchSize]
+
+            model = traininig.Model(fileEmbeddingsBatch, wordEmbeddings, contextSize=windowSize-2, negative=negative)
+            traininig.train(model, textIndexMap, wordIndexMap, wordEmbeddings, trainingBatch, epochs, 1, learningRate)
+
+            fileEmbeddings[superBatchIndex*superBatchSize:(superBatchIndex+1)*superBatchSize] = model.fileEmbeddings.get_value()
+            contextsFile.flush()
+
+        log.progress('Dumping text embeddings...')
+        binary.dumpTensor(fileEmbeddingsPath, fileEmbeddings)
+        log.info('Dumping text embeddings complete')
 
 
 
@@ -191,7 +211,8 @@ def launch(pathTo, hyper):
     strict = hyper.strict
 
     trainTextVectors(connector, w2vEmbeddingsPath, wordIndexMap, wordFrequencyMap, wordEmbeddings, contextsPath,
-                     hyper.sample, hyper.minCount, windowSize, negative, strict)
+                     hyper.sample, hyper.minCount, windowSize, negative, strict, hyper.contextsPerText, hyper.superBatchSize,
+                     hyper.fileEmbeddingSize, hyper.epochs, hyper.learningRate, pathTo.fileEmbeddings)
 
 
 if __name__ == '__main__':
@@ -203,10 +224,12 @@ if __name__ == '__main__':
         windowSize=3,
         negative=100,
         strict=False,
+        contextsPerText=600,
         fileEmbeddingSize=1000,
-        epochs=10,
+        epochs=5,
         batchSize=1,
-        learningRate=0.025
+        learningRate=0.025,
+        superBatchSize=5000
     )
 
     launch(pathTo, hyper)

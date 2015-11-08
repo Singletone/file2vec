@@ -30,9 +30,9 @@ class Model:
         else:
             weights = rnd2(fileEmbeddingSize + contextSize * wordEmbeddingSize, wordsCount)
 
-        self.fileEmbeddings = theano.shared(asfx(fileEmbeddings), 'fileEmbeddings', borrow=True)
-        self.wordEmbeddings = theano.shared(asfx(wordEmbeddings), 'wordEmbeddings', borrow=True)
-        self.weights = theano.shared(asfx(weights), 'weights', borrow=True)
+        self.fileEmbeddings = theano.shared(asfx(fileEmbeddings), 'fileEmbeddings', borrow=False)
+        self.wordEmbeddings = theano.shared(asfx(wordEmbeddings), 'wordEmbeddings', borrow=False)
+        self.weights = theano.shared(asfx(weights), 'weights', borrow=False)
 
         fileIndexOffset = 0
         wordIndicesOffset = fileIndexOffset + 1
@@ -72,7 +72,7 @@ class Model:
         updates = [(p, T.inc_subtensor(subP, -learningRate * g)) for p, subP, g in zip(parameters, subParameters, gradients)]
 
         contextIndex = T.iscalar('batchIndex')
-        self.trainingContexts = theano.shared(empty(1,1), 'trainingContexts', borrow=True)
+        self.trainingContexts = theano.shared(empty(1,1), 'trainingContexts', borrow=False)
 
         self.trainModel = theano.function(
             inputs=[contextIndex, learningRate],
@@ -102,8 +102,8 @@ class Model:
 
 
 
-def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPath,
-          epochs, batchSize, learningRate):
+def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts,
+          epochs, batchSize, learningRate, metricsPath=None):
     model.trainingContexts.set_value(contexts)
 
     contextsCount, contextSize = contexts.shape
@@ -146,7 +146,8 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPa
             'learningRate': learningRate
         }
 
-        validation.dump(metricsPath, epoch, metrics)
+        if metricsPath is not None:
+            validation.dump(metricsPath, epoch, metrics)
 
 
 def launch(pathTo, hyper):
@@ -175,10 +176,11 @@ def launch(pathTo, hyper):
     model = Model(fileEmbeddings, wordEmbeddings, contextSize=contextSize, negative=negative)
     # model = Model.load(pathTo.fileEmbeddings, pathTo.wordEmbeddings, pathTo.weights)
 
-    train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPath,
+    train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts,
           epochs=hyper.epochs,
           batchSize=hyper.batchSize,
-          learningRate=hyper.learningRate)
+          learningRate=hyper.learningRate,
+          metricsPath=metricsPath)
 
     model.dump(pathTo.fileEmbeddings, pathTo.weights)
 

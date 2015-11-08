@@ -60,18 +60,20 @@ class IndexContextProvider:
 
 
 class HyperParameters:
-    def __init__(self, connector=None, threshold=1e1, minCount=2, windowSize=7,
-                 negative=100, strict=False, fileEmbeddingSize=800, epochs=20, batchSize=1, learningRate=0.01):
+    def __init__(self, connector=None, threshold=1e1, minCount=2, windowSize=7, negative=100, strict=False, contextsPerText=None,
+                 fileEmbeddingSize=800, epochs=20, batchSize=1, learningRate=0.01, superBatchSize=100):
         self.connector = connector
         self.sample = threshold
         self.minCount = minCount
         self.windowSize = windowSize
         self.negative = negative
         self.strict = strict
+        self.contextsPerText = contextsPerText
         self.fileEmbeddingSize = fileEmbeddingSize
         self.epochs = epochs
         self.batchSize = batchSize
         self.learningRate = learningRate
+        self.superBatchSize = superBatchSize
 
 
 def dumpWordMap(indexMap, indexMapFilePath):
@@ -164,7 +166,7 @@ def loadEmbeddings(embeddingsFilePath):
         embeddingsCount = binary.readi(embeddingsFile)
         embeddingSize = binary.readi(embeddingsFile)
 
-        embeddings = numpy.empty((embeddingsCount, embeddingSize))
+        embeddings = numpy.empty((embeddingsCount, embeddingSize)).astype('float32')
 
         for embeddingIndex in range(0, embeddingsCount):
             embedding = binary.readf(embeddingsFile, embeddingSize)
