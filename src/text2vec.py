@@ -3,6 +3,7 @@ from os.path import exists
 import gc
 import numpy
 import io
+import h5py
 
 import connectors
 import extraction
@@ -100,11 +101,12 @@ def inferContexts(contextsPath, names, texts, wordIndexMap, windowSize, negative
     wordIndices = numpy.asarray(wordIndices)
     maxWordIndex = max(wordIndices)
 
-    with open(contextsPath, 'wb+') as contextsFile:
-        binary.writei(contextsFile, 0) # placeholder for texts count
-        binary.writei(contextsFile, contextsCount)
-        binary.writei(contextsFile, windowSize)
-        binary.writei(contextsFile, negative)
+    with h5py.File(contextsPath, 'w') as contextsFile:
+        tensor = contextsFile.create_dataset('contexts',
+                                             dtype='int32',
+                                             shape=(0, contextsCount, windowSize + negative),
+                                             maxshape=(None, contextsCount, windowSize + negative),
+                                             chunks=(1, contextsCount, windowSize + negative))
 
         textsCount = 0
         for name, text in zip(names, texts):
@@ -116,18 +118,17 @@ def inferContexts(contextsPath, names, texts, wordIndexMap, windowSize, negative
                 textIndexMap[name] = len(textIndexMap)
                 contexts = numpy.asarray(contexts)
 
-                contexts = processing.generateNegativeSamples(negative, contexts, wordIndices, maxWordIndex, strict)
-                contexts = numpy.ravel(contexts)
-
-                binary.writei(contextsFile, contexts)
+                negativeSamples = processing.generateNegativeSamples(negative, contexts, wordIndices, maxWordIndex, strict)
+                contexts = numpy.concatenate([contexts, negativeSamples], axis=1)
+                tensor.resize(tensor.shape[0] + 1, axis=0)
+                tensor[-1] = contexts
 
             textsCount += 1
             log.progress('Creating contexts: {0:.3f}%. Text index map: {1}. Contexts: {2}.',
-                         textsCount, len(texts), len(textIndexMap), textsCount * contextsCount)
-
-        contextsFile.seek(0, io.SEEK_SET)
-        binary.writei(contextsFile, textsCount)
-        contextsFile.flush()
+                         textsCount,
+                         len(texts),
+                         len(tensor),
+                         tensor.shape[0] * tensor.shape[1])
 
     log.lineBreak()
 
@@ -144,8 +145,9 @@ def trainTextVectors(connector, w2vEmbeddingsPath, wordIndexMapPath, wordFrequen
         textIndexMap = parameters.loadMap(pathTo.textIndexMap)
 
         log.progress('Loading contexts...')
-        contexts = binary.loadTensor(contextsPath)
-        log.info('Loaded {0} contexts.', len(contexts))
+        with h5py.File(contextsPath, 'r') as contextsFile:
+            contexts = contextsFile['contexts']
+            log.info('Loaded {0} contexts.', len(contexts))
     else:
         w2vWordIndexMap, w2vWordEmbeddings = parameters.loadW2VParameters(w2vEmbeddingsPath)
 
