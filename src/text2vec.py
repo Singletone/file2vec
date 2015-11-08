@@ -180,13 +180,14 @@ def trainTextVectors(connector, w2vEmbeddingsPath, wordIndexMapPath, wordFrequen
         for superBatchIndex in xrange(0, superBatchesCount):
             log.info('Text batch: {0}/{1}.', superBatchIndex + 1, superBatchesCount)
 
+            # TODO: this only works if superBatchSize == textsCount; otherwise text indices do not match
             contexts.read_direct(trainingBatch, source_sel=numpy.s_[superBatchIndex*superBatchSize:(superBatchIndex+1)*superBatchSize])
             trainingBatchReshaped = trainingBatch.reshape((superBatchSize*contextsPerText, 1+windowSize+negative))
 
             fileEmbeddingsBatch = fileEmbeddings[superBatchIndex*superBatchSize:(superBatchIndex+1)*superBatchSize]
 
-            model = traininig.Model(fileEmbeddingsBatch, wordEmbeddings, contextSize=windowSize-2, negative=negative)
-            traininig.train(model, textIndexMap, wordIndexMap, wordEmbeddings, trainingBatchReshaped, epochs, 1, learningRate)
+            model = paralleltraininig.Model(fileEmbeddingsBatch, wordEmbeddings, contextSize=windowSize-2, negative=negative)
+            paralleltraininig.train(model, textIndexMap, wordIndexMap, wordEmbeddings, trainingBatch, epochs, 1, learningRate)
 
             fileEmbeddings[superBatchIndex*superBatchSize:(superBatchIndex+1)*superBatchSize] = model.fileEmbeddings.get_value()
             contextsFile.flush()

@@ -60,35 +60,35 @@ class Model:
 
         if trainWeights:
             parameters.append(self.weights)
-            subParameters.append(None)
+            subParameters.append(subWeights)
         else:
             consider_constant.append(self.weights)
 
-        cost = -T.mean(T.log(T.nnet.sigmoid(probabilities[:,0])) + T.sum(T.log(T.nnet.sigmoid(-probabilities[:,1:])), dtype=floatX, acc_dtype=floatX), dtype=floatX, acc_dtype=floatX)
+        # cost = -T.mean(T.log(T.nnet.sigmoid(probabilities[:,0])) + T.sum(T.log(T.nnet.sigmoid(-probabilities[:,1:])), dtype=floatX, acc_dtype=floatX), dtype=floatX, acc_dtype=floatX)
+        cost = -T.log(T.nnet.sigmoid(probabilities[:,0])) - T.sum(T.log(T.nnet.sigmoid(-probabilities[:,1:])), dtype=floatX, acc_dtype=floatX)
 
         learningRate = T.scalar('learningRate', dtype=floatX)
 
         updates = []
         for p, subP in zip(parameters, subParameters):
             if subP is not None:
-                gradient = T.grad(cost, wrt=subP)
+                gradient = T.jacobian(cost, wrt=subP)
                 update = (p, T.inc_subtensor(subP, -learningRate * gradient))
             else:
-                gradient = T.grad(cost, wrt=p)
+                gradient = T.jacobian(cost, wrt=p)
                 update = (p, p - learningRate * gradient)
 
             updates.append(update)
 
-        batchIndex = T.iscalar('batchIndex')
-        batchSize = T.iscalar('batchSize')
-        self.trainingContexts = theano.shared(empty(1,1), 'trainingContexts', borrow=False)
+        contextIndex = T.iscalar('contextIndex')
+        self.trainingContexts = theano.shared(empty(1,1,1), 'trainingContexts', borrow=False)
 
         self.trainModel = theano.function(
-            inputs=[batchIndex, batchSize, learningRate],
+            inputs=[contextIndex, learningRate],
             outputs=cost,
             updates=updates,
             givens={
-                contexts: self.trainingContexts[batchIndex * batchSize : (batchIndex + 1) * batchSize]
+                contexts: self.trainingContexts[:,contextIndex]
             }
         )
 
@@ -115,9 +115,7 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts,
           epochs, batchSize, learningRate, metricsPath=None):
     model.trainingContexts.set_value(contexts)
 
-    contextsCount, contextSize = contexts.shape
-
-    batchesCount = contextsCount / batchSize + int(contextsCount % batchSize > 0)
+    textsCount, contextsCount, contextSize = contexts.shape
 
     initialiLearningRate = learningRate
     startTime = time.time()
@@ -131,13 +129,13 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts,
 
     for epoch in xrange(0, epochs):
         errors = []
-        for batchIndex in xrange(0, batchesCount):
-            error = model.trainModel(batchIndex, batchSize, learningRate)
+        for contextIndex in xrange(0, contextsCount):
+            error = model.trainModel(contextIndex, learningRate)
             errors.append(error)
 
             log.progress('Training model: {0:.3f}%. Epoch: {1}. Elapsed: {2}. Error(mean,median,min,max): {3:.3f}, {4:.3f}, {5:.3f}, {6:.3f}. Learning rate: {7}.',
-                     epoch * batchesCount + batchIndex + 1,
-                     epochs * batchesCount,
+                     epoch * contextsCount + contextIndex + 1,
+                     epochs * contextsCount,
                      epoch + 1,
                      log.delta(time.time() - startTime),
                      metrics['meanError'],
