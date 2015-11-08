@@ -2,6 +2,7 @@ import collections
 import gc
 import numpy
 from os.path import exists
+import time
 
 import h5py
 
@@ -145,7 +146,13 @@ def trainTextVectors(connector, w2vEmbeddingsPath, wordIndexMapPath, wordFrequen
         log.progress('Loading contexts...')
         with h5py.File(contextsPath, 'r') as contextsFile:
             contexts = contextsFile['contexts']
-            log.info('Loaded {0} contexts.', len(contexts))
+            log.info('Loaded {0} contexts. Shape: {1}', len(contexts), contexts.shape)
+
+            log.progress('Reading training batch....')
+            trainingBatch = numpy.zeros((20000,600,windowSize+negative))
+            contexts.read_direct(trainingBatch, source_sel=numpy.s_[:20000,:,:])
+
+            log.info('Reading training batch complete. Shape: {0}', trainingBatch.shape)
     else:
         w2vWordIndexMap, w2vWordEmbeddings = parameters.loadW2VParameters(w2vEmbeddingsPath)
 
@@ -194,7 +201,7 @@ if __name__ == '__main__':
         threshold=1e-3,
         minCount=1,
         windowSize=3,
-        negative=10,
+        negative=100,
         strict=False,
         fileEmbeddingSize=1000,
         epochs=10,
