@@ -226,7 +226,7 @@ def launch(pathTo, hyper):
     processData(
         inputDirectoryPath = pathTo.weededDir,
         w2vEmbeddingsFilePath = pathTo.w2vEmbeddings,
-        fileIndexMapFilePath = pathTo.fileIndexMap,
+        fileIndexMapFilePath = pathTo.textIndexMap,
         wordIndexMapFilePath = pathTo.wordIndexMap,
         wordEmbeddingsFilePath = pathTo.wordEmbeddings,
         contextsPath = pathTo.contexts,

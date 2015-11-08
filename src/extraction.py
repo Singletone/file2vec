@@ -15,6 +15,7 @@ def clean(text):
     text = re.sub('\s+', ' ', text)
     text = re.sub('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', 'URL', text)
     text = re.sub('\([^\)]+\)', '', text)
+    text = re.sub('\[[^\]]+\]', '', text)
     text = re.sub('(:[^\.]\.)', '', text)
     text = re.sub('[,":_\*]', ' ', text)
     text = re.sub('!', '.', text)

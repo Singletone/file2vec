@@ -80,13 +80,14 @@ def buildWordFrequencyMap(connector):
 
 
 
-def weed(inputDirectoryPath, outputDirectoryPath, sample, minCount, connector):
+def weed(inputDirectoryPath, outputDirectoryPath, sample, minCount):
     if os.path.exists(outputDirectoryPath):
         shutil.rmtree(outputDirectoryPath, ignore_errors=True)
 
     os.mkdir(outputDirectoryPath)
     os.chown(outputDirectoryPath, 1000, 1000)
 
+    connector=connectors.TextFilesConnector(inputDirectoryPath)
     textFilesCount = connector.count()
 
     wordFrequencyMap = buildWordFrequencyMap(connector)
@@ -109,16 +110,14 @@ def launch(pathTo, hyper):
         inputDirectoryPath = pathTo.extractedDir,
         outputDirectoryPath = pathTo.weededDir,
         sample = hyper.sample,
-        minCount = hyper.minCount,
-        connector = hyper.connector
+        minCount = hyper.minCount
     )
 
 if __name__ == '__main__':
     pathTo = kit.PathTo('Cockatoo', experiment='default', w2vEmbeddings='wiki_full_s800_w10_mc20_hs1.bin')
     hyper = parameters.HyperParameters(
         threshold=0.3,
-        minCount=2,
-        connector=connectors.TextFilesConnector(pathTo.dataSetDir))
+        minCount=2)
 
     launch(pathTo, hyper)
 

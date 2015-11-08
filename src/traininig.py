@@ -150,7 +150,7 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts, metricsPa
 
 
 def launch(pathTo, hyper):
-    fileIndexMap = parameters.loadMap(pathTo.fileIndexMap)
+    fileIndexMap = parameters.loadMap(pathTo.textIndexMap)
     filesCount = len(fileIndexMap)
     fileEmbeddingSize = hyper.fileEmbeddingSize
     wordIndexMap = parameters.loadMap(pathTo.wordIndexMap)
@@ -184,7 +184,7 @@ def launch(pathTo, hyper):
 
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('Duplicates', experiment='default', w2vEmbeddings='wiki_full_s800_w10_mc20_hs1.bin')
-    hyper = parameters.HyperParameters(fileEmbeddingSize=800, epochs=20, batchSize=1, learningRate=0.01)
+    pathTo = kit.PathTo('Duplicates', experiment='duplicates', w2vEmbeddings='wiki_full_s1000_w10_mc20_hs1.bin')
+    hyper = parameters.HyperParameters(fileEmbeddingSize=1000, epochs=20, batchSize=1, learningRate=0.01)
 
     launch(pathTo, hyper)
