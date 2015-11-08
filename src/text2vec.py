@@ -1,8 +1,8 @@
 import collections
-from os.path import exists
 import gc
 import numpy
-import io
+from os.path import exists
+
 import h5py
 
 import connectors
@@ -12,8 +12,6 @@ import log
 import parameters
 import processing
 import weeding
-import binary
-
 
 batchSize = 10000
 
