@@ -23,13 +23,12 @@ class Model:
         filesCount, fileEmbeddingSize = fileEmbeddings.shape
         wordsCount, wordEmbeddingSize = wordEmbeddings.shape
 
-        trainWeights = weights is None
-        if trainWeights:
-            weights = rnd2(fileEmbeddingSize + contextSize * wordEmbeddingSize, wordsCount)
-        else:
+        if weights is not None:
             featuresCount, activationsCount = weights.shape
             contextSize = (featuresCount - fileEmbeddingSize) / wordEmbeddingSize
             negative = activationsCount - 1
+        else:
+            weights = rnd2(fileEmbeddingSize + contextSize * wordEmbeddingSize, wordsCount)
 
         self.fileEmbeddings = theano.shared(asfx(fileEmbeddings), 'fileEmbeddings', borrow=False)
         self.wordEmbeddings = theano.shared(asfx(wordEmbeddings), 'wordEmbeddings', borrow=False)
@@ -40,55 +39,47 @@ class Model:
         indicesOffset = wordIndicesOffset + contextSize
 
         contexts = T.imatrix('contexts')
-        fileIndices = contexts[:,fileIndexOffset:wordIndicesOffset]
-        wordIndices = contexts[:,wordIndicesOffset:indicesOffset]
-        indices = contexts[:,indicesOffset:indicesOffset + negative]
+        context = T.flatten(contexts)
+        fileIndex = context[fileIndexOffset:wordIndicesOffset]
+        wordIndices = context[wordIndicesOffset:indicesOffset]
+        indices = context[indicesOffset:indicesOffset + negative]
 
-        files = self.fileEmbeddings[fileIndices]
-        fileFeatures = T.flatten(files, outdim=2)
+        file = self.fileEmbeddings[fileIndex]
+        fileFeatures = T.flatten(file, outdim=1)
         words = self.wordEmbeddings[wordIndices]
-        wordFeatures = T.flatten(words, outdim=2)
-        features = T.concatenate([fileFeatures, wordFeatures], axis=1)
+        wordFeatures = T.flatten(words, outdim=1)
+        features = T.concatenate([fileFeatures, wordFeatures], axis=0)
 
-        subWeights = self.weights[:,indices].dimshuffle(1, 0, 2)
+        subWeights = self.weights[:,indices]
 
-        probabilities = T.batched_dot(features, subWeights)
+        probabilities = T.dot(features, subWeights)
 
         parameters = [self.fileEmbeddings]
-        subParameters = [files]
+        subParameters = [file]
         consider_constant = [self.wordEmbeddings]
 
-        if trainWeights:
-            parameters.append(self.weights)
-            subParameters.append(None)
-        else:
+        if weights is not None:
             consider_constant.append(self.weights)
+        else:
+            parameters.append(self.weights)
+            subParameters.append(subWeights)
 
-        cost = -T.mean(T.log(T.nnet.sigmoid(probabilities[:,0])) + T.sum(T.log(T.nnet.sigmoid(-probabilities[:,1:])), dtype=floatX, acc_dtype=floatX), dtype=floatX, acc_dtype=floatX)
+        cost = -T.mean(T.log(T.nnet.sigmoid(probabilities[0])) + T.sum(T.log(T.nnet.sigmoid(-probabilities[1:]))))
 
         learningRate = T.scalar('learningRate', dtype=floatX)
 
-        updates = []
-        for p, subP in zip(parameters, subParameters):
-            if subP is not None:
-                gradient = T.grad(cost, wrt=subP)
-                update = (p, T.inc_subtensor(subP, -learningRate * gradient))
-            else:
-                gradient = T.grad(cost, wrt=p)
-                update = (p, p - learningRate * gradient)
+        gradients = [T.grad(cost, wrt=subP, consider_constant=consider_constant) for subP in subParameters]
+        updates = [(p, T.inc_subtensor(subP, -learningRate * g)) for p, subP, g in zip(parameters, subParameters, gradients)]
 
-            updates.append(update)
-
-        batchIndex = T.iscalar('batchIndex')
-        batchSize = T.iscalar('batchSize')
+        contextIndex = T.iscalar('batchIndex')
         self.trainingContexts = theano.shared(empty(1,1), 'trainingContexts', borrow=False)
 
         self.trainModel = theano.function(
-            inputs=[batchIndex, batchSize, learningRate],
+            inputs=[contextIndex, learningRate],
             outputs=cost,
             updates=updates,
             givens={
-                contexts: self.trainingContexts[batchIndex * batchSize : (batchIndex + 1) * batchSize]
+                contexts: self.trainingContexts[contextIndex:contextIndex + 1]
             }
         )
 
@@ -117,8 +108,6 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts,
 
     contextsCount, contextSize = contexts.shape
 
-    batchesCount = contextsCount / batchSize + int(contextsCount % batchSize > 0)
-
     initialiLearningRate = learningRate
     startTime = time.time()
     metrics = {
@@ -131,13 +120,13 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts,
 
     for epoch in xrange(0, epochs):
         errors = []
-        for batchIndex in xrange(0, batchesCount):
-            error = model.trainModel(batchIndex, batchSize, learningRate)
+        for contextIndex in xrange(0, contextsCount):
+            error = model.trainModel(contextIndex, learningRate)
             errors.append(error)
 
             log.progress('Training model: {0:.3f}%. Epoch: {1}. Elapsed: {2}. Error(mean,median,min,max): {3:.3f}, {4:.3f}, {5:.3f}, {6:.3f}. Learning rate: {7}.',
-                     epoch * batchesCount + batchIndex + 1,
-                     epochs * batchesCount,
+                     epoch * contextsCount + contextIndex + 1,
+                     epochs * contextsCount,
                      epoch + 1,
                      log.delta(time.time() - startTime),
                      metrics['meanError'],
@@ -197,7 +186,11 @@ def launch(pathTo, hyper):
 
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('Duplicates', experiment='duplicates', w2vEmbeddings='wiki_full_s1000_w10_mc20_hs1.bin')
-    hyper = parameters.HyperParameters(fileEmbeddingSize=1000, epochs=5, batchSize=1, learningRate=0.01)
+    pathTo = kit.PathTo('Cockatoo', experiment='cockatoo', w2vEmbeddings='wiki_full_s1000_w10_mc20_hs1.bin')
+    hyper = parameters.HyperParameters(
+        fileEmbeddingSize=1000,
+        epochs=5,
+        batchSize=1,
+        learningRate=0.025)
 
     launch(pathTo, hyper)

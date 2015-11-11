@@ -13,7 +13,7 @@ import parameters
 import processing
 import weeding
 import binary
-import paralleltraininig
+import traininig
 
 batchSize = 10000
 
@@ -186,8 +186,8 @@ def trainTextVectors(connector, w2vEmbeddingsPath, wordIndexMapPath, wordFrequen
 
             fileEmbeddingsBatch = fileEmbeddings[superBatchIndex*superBatchSize:(superBatchIndex+1)*superBatchSize]
 
-            model = paralleltraininig.Model(fileEmbeddingsBatch, wordEmbeddings, contextSize=windowSize-2, negative=negative)
-            paralleltraininig.train(model, textIndexMap, wordIndexMap, wordEmbeddings, trainingBatch, epochs, 1, learningRate)
+            model = traininig.Model(fileEmbeddingsBatch, wordEmbeddings, contextSize=windowSize-2, negative=negative)
+            traininig.train(model, textIndexMap, wordIndexMap, wordEmbeddings, trainingBatchReshaped, epochs, 1, learningRate)
 
             fileEmbeddings[superBatchIndex*superBatchSize:(superBatchIndex+1)*superBatchSize] = model.fileEmbeddings.get_value()
             contextsFile.flush()
@@ -216,9 +216,9 @@ def launch(pathTo, hyper):
 
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('Duplicates', experiment='duplicates', w2vEmbeddings='wiki_full_s1000_w10_mc20_hs1.bin')
+    pathTo = kit.PathTo('Cockatoo', experiment='cockatoo', w2vEmbeddings='wiki_full_s1000_w10_mc20_hs1.bin')
     hyper = parameters.HyperParameters(
-        connector = connectors.TextFilesConnector(pathTo.dataSetDir),
+        connector=connectors.TextFilesConnector(pathTo.dataSetDir),
         threshold=1e-3,
         minCount=1,
         windowSize=3,
@@ -226,7 +226,7 @@ if __name__ == '__main__':
         strict=False,
         contextsPerText=600,
         fileEmbeddingSize=1000,
-        epochs=2,
+        epochs=5,
         batchSize=1,
         learningRate=0.025,
         superBatchSize=25

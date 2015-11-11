@@ -17,13 +17,10 @@ dotPattern = re.compile('\.')
 
 
 class WordContextProvider:
-    def __init__(self, text=None, textFilePath=None, chunkSize=1073741824, minContexts=None, maxContexts=None): # 1Mb as defeault buffer size
+    def __init__(self, text=None, textFilePath=None, chunkSize=1073741824): # 1Mb as defeault buffer size
         self.text = text
         self.textFile = None
         self.chunkSize = chunkSize
-        self.minContexts = minContexts
-        self.maxContexts = maxContexts
-        self.counter = 0
 
         if textFilePath is not None:
             self.textFile = open(textFilePath)
@@ -38,57 +35,44 @@ class WordContextProvider:
         global spacePattern
         global dotPattern
 
-        while (self.minContexts is not None and self.counter < self.minContexts) \
-                or (self.counter < 1):
+        if self.textFile is not None:
+            chunk = self.textFile.read(self.chunkSize)
+        else:
+            chunk = self.text
+
+        tail = ''
+
+        while chunk != '':
+            chunk = tail + chunk
+            chunk = dotPattern.split(chunk)
+
+            tail = chunk[-1]
+
+            for sentence in chunk[:-1]:
+                sentence = sentence.strip()
+                words = spacePattern.split(sentence)
+
+                for wordIndex in range(len(words) - size + 1):
+                    window = words[wordIndex: wordIndex + size]
+
+                    yield window
+
+            words = spacePattern.split(tail.lstrip())
+
             if self.textFile is not None:
                 chunk = self.textFile.read(self.chunkSize)
             else:
-                chunk = self.text
+                chunk = ''
 
-            tail = ''
+            if len(words) > size * 2 - 1 or chunk == '':
+                if chunk != '':
+                    tail = ' '.join(words[-size:])
+                    words = words[:-size]
 
-            while chunk != '':
-                chunk = tail + chunk
-                chunk = dotPattern.split(chunk)
+                for wordIndex in range(len(words) - size + 1):
+                    window = words[wordIndex: wordIndex + size]
 
-                tail = chunk[-1]
-
-                for sentence in chunk[:-1]:
-                    sentence = sentence.strip()
-                    words = spacePattern.split(sentence)
-
-                    for wordIndex in range(len(words) - size + 1):
-                        window = words[wordIndex: wordIndex + size]
-
-                        yield window
-
-                        self.counter += 1
-                        if self.maxContexts is not None and self.counter >= self.maxContexts:
-                            return
-
-                words = spacePattern.split(tail.lstrip())
-
-                if self.textFile is not None:
-                    chunk = self.textFile.read(self.chunkSize)
-                else:
-                    chunk = ''
-
-                if len(words) > size * 2 - 1 or chunk == '':
-                    if chunk != '':
-                        tail = ' '.join(words[-size:])
-                        words = words[:-size]
-
-                    for wordIndex in range(len(words) - size + 1):
-                        window = words[wordIndex: wordIndex + size]
-
-                        yield window
-
-                        self.counter += 1
-                        if self.maxContexts is not None and self.counter >= self.maxContexts:
-                            return
-
-            if self.counter == 0:
-                return
+                    yield window
 
 
 def generateNegativeSamples(negative, contexts, wordIndices, maxWordIndex, strict=False):
@@ -236,7 +220,7 @@ def launch(pathTo, hyper):
 
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('Wikipedia', experiment='default', w2vEmbeddings='wiki_full_s800_w10_mc20_hs1.bin')
-    hyper = parameters.HyperParameters(windowSize=7, negative=100, strict=False)
+    pathTo = kit.PathTo('Cockatoo', experiment='cockatoo', w2vEmbeddings='wiki_full_s1000_w10_mc20_hs1.bin')
+    hyper = parameters.HyperParameters(windowSize=3, negative=100, strict=False)
 
     launch(pathTo, hyper)

@@ -89,7 +89,7 @@ def launch(pathTo, hyper):
 
 
 if __name__ == '__main__':
-    pathTo = kit.PathTo('Cockatoo', experiment='default')
+    pathTo = kit.PathTo('Cockatoo', experiment='cockatoo', w2vEmbeddings='wiki_full_s1000_w10_mc20_hs1.bin')
     hyper = parameters.HyperParameters(connector = connectors.TextFilesConnector(pathTo.dataSetDir))
 
     launch(pathTo, hyper)
