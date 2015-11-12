@@ -1,18 +1,17 @@
-import kit
-import scipy.stats
+import itertools
 import numpy
-import re
 import os
 import random
-import itertools
+import re
+import scipy.spatial.distance as ssd
+import scipy.stats
+from scipy.cluster.hierarchy import dendrogram, linkage
+
+import pandas
 from matplotlib import colors
 from matplotlib import pyplot as plt
 
-import pandas
-
-import log
 import vectors
-import parameters
 from libs import tsne
 
 rubensteinGoodenoughData = None
@@ -399,7 +398,7 @@ def compareEmbeddings(indexMap, embeddingsList, comparator=None, annotate=False,
     xx, yy = zip(*xy)
 
     if comparator is None:
-        comparator = vectors.cosineSimilarity
+        comparator = lambda a, b: vectors.cosineSimilarity(a, b) + 1 / vectors.euclideanDistance(a, b)
 
     function = lambda xy: comparator(embeddingsList[xy[0]], embeddingsList[xy[1]]) if xy[0] != xy[1] else numpy.nan
     comparisons = map(function, xy)
@@ -436,27 +435,31 @@ def compareEmbeddings(indexMap, embeddingsList, comparator=None, annotate=False,
     plt.show()
 
 
-def main():
-    pathTo = kit.PathTo('IMDB', w2vEmbeddings='wiki_full_s1000_w10_mc20_hs1.bin')
+def buildEmbeddingsTree(indexMap, embeddings, comparator=None):
+    embeddingsCount = len(embeddings)
+    embeddingIndices = numpy.arange(0, embeddingsCount)
+    xy = [xy for xy in itertools.product(embeddingIndices, embeddingIndices)]
 
-    embeddingsFilePath = pathTo.w2vEmbeddings
-    wordIndexMap, embeddings = parameters.loadW2VParameters(embeddingsFilePath)
+    comparator = lambda a, b: vectors.euclideanDistance(a, b) + 1 / (2 + 2*vectors.cosineSimilarity(a, b))
 
-    rgMetric = rubensteinGoodenough(wordIndexMap, embeddings)
-    log.info('Rubenstein-Goodenough: {0:.2f}/10. State of the art: 9.15/10', rgMetric * 10)
+    function = lambda xy: comparator(embeddings[xy[0]], embeddings[xy[1]]) if xy[0] != xy[1] else 0
+    comparisons = map(function, xy)
+    maxComparison = max(comparisons)
+    comparisons = numpy.reshape(comparisons, (embeddingsCount, embeddingsCount)) / maxComparison
+    comparisons = ssd.squareform(comparisons)
+    links = linkage(comparisons)
 
-    wordSim353Metric = wordSimilarity353(wordIndexMap, embeddings)
-    log.info('WordSimilarity-353: {0:.2f}/10. State of the art: 8.1/10', wordSim353Metric * 10)
+    fig, ax = plt.subplots()
+    fig.subplots_adjust(right=0.8)
 
-    simLex999Metric = simLex999(wordIndexMap, embeddings)
-    log.info('SimLex-999: {0:.2f}/10. State of the art: 6.42/10', simLex999Metric * 10)
+    names = map(lambda nameIndexPair: nameIndexPair[0], indexMap.items())
+    dendrogram(
+        links,
+        leaf_rotation=90.,
+        leaf_font_size=8.,
+        orientation='right',
+        labels=names,
+        show_contracted=True,
+        show_leaf_counts=True)
 
-    syntWordRelMetric = syntacticWordRelations(wordIndexMap, embeddings)
-    log.info('Syntactic word relations: {0:.2f}/10. State of the art: 10/10', syntWordRelMetric * 10)
-
-    satQuestionsMetric = satQuestions(wordIndexMap, embeddings)
-    log.info('SAT Questions: {0:.2f}/10. State of the art: 8.15/10', satQuestionsMetric * 10)
-
-
-if __name__ == '__main__':
-    main()
+    plt.show()
