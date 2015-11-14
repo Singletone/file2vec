@@ -103,7 +103,7 @@ class Model:
 
 
 def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts,
-          epochs, batchSize, learningRate, metricsPath=None):
+          epochs, batchSize, learningRate, metricsPath=None, pathTo=None):
     model.trainingContexts.set_value(contexts)
 
     contextsCount, contextSize = contexts.shape
@@ -117,6 +117,8 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts,
         'minError': np.nan,
         'learningRate': learningRate
     }
+
+    maxError = None
 
     for epoch in xrange(0, epochs):
         errors = []
@@ -145,6 +147,10 @@ def train(model, fileIndexMap, wordIndexMap, wordEmbeddings, contexts,
             'minError': np.min(errors),
             'learningRate': learningRate
         }
+
+        if pathTo is not None and (maxError is None or maxError > metrics['maxError']):
+            model.dump(pathTo.fileEmbeddings, pathTo.weights)
+            maxError = metrics['maxError']
 
         if metricsPath is not None:
             validation.dump(metricsPath, epoch, metrics)
@@ -180,16 +186,16 @@ def launch(pathTo, hyper):
           epochs=hyper.epochs,
           batchSize=hyper.batchSize,
           learningRate=hyper.learningRate,
-          metricsPath=metricsPath)
-
-    model.dump(pathTo.fileEmbeddings, pathTo.weights)
+          metricsPath=metricsPath,
+          pathTo=pathTo)
 
 
 if __name__ == '__main__':
     pathTo = kit.PathTo('Cockatoo', experiment='cockatoo', w2vEmbeddings='wiki_full_s1000_w10_mc20_hs1.bin')
+    # pathTo = kit.PathTo('Duplicates', experiment='duplicates', w2vEmbeddings='wiki_full_s1000_w10_mc20_hs1.bin')
     hyper = parameters.HyperParameters(
         fileEmbeddingSize=1000,
-        epochs=5,
+        epochs=100,
         batchSize=1,
         learningRate=0.025)
 

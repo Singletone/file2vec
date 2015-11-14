@@ -415,7 +415,8 @@ def compareEmbeddings(indexMap, embeddingsList, comparator=None, annotate=False,
         neighbours = neighbours[neighbours > 0]
         comparisons[x,y] = numpy.mean(neighbours)
 
-    plt.subplot(111)
+    fig, ax = plt.subplots()
+    fig.subplots_adjust(bottom=0.2)
 
     if axisLabels:
         filePaths = indexMap.keys()
@@ -452,7 +453,8 @@ def buildEmbeddingsTree(indexMap, embeddings, comparator=None):
     fig, ax = plt.subplots()
     fig.subplots_adjust(right=0.8)
 
-    names = map(lambda nameIndexPair: nameIndexPair[0], indexMap.items())
+    names = map(lambda nameIndexPair: nameIndexPair[0].split('/')[-1], indexMap.items())
+    names = sorted(names)
     dendrogram(
         links,
         leaf_rotation=90.,

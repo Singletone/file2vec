@@ -2,6 +2,8 @@ from binary import *
 from parameters import *
 from validation import *
 from vectors import *
+import kit
+import math
 
 
 if __name__ == '__main__':
@@ -10,7 +12,9 @@ if __name__ == '__main__':
     textIndexMap = loadMap(pathTo.textIndexMap)
     fileEmbeddings = loadTensor(pathTo.fileEmbeddings)
 
-    comparator = lambda a, b: cosineSimilarity(a, b) + 1 / euclideanDistance(a, b)
+    comparator = lambda a, b: cosineSimilarity(a, b) / math.pow(euclideanDistance(a, b), 2)
+    # comparator = lambda a, b: cosineSimilarity(a, b)
 
     compareEmbeddings(textIndexMap, fileEmbeddings, comparator=comparator, annotate=False, axisLabels=True)
+    # buildEmbeddingsTree(textIndexMap, fileEmbeddings, comparator=comparator)
     # compareMetrics(pathTo.metrics('history.csv'), 'meanError', 'medianError', 'minError', 'maxError')
