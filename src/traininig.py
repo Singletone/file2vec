@@ -195,7 +195,7 @@ if __name__ == '__main__':
     # pathTo = kit.PathTo('Duplicates', experiment='duplicates', w2vEmbeddings='wiki_full_s1000_w10_mc20_hs1.bin')
     hyper = parameters.HyperParameters(
         fileEmbeddingSize=1000,
-        epochs=100,
+        epochs=20,
         batchSize=1,
         learningRate=0.025)
 
