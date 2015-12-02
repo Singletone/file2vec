@@ -12,7 +12,7 @@ object controller {
       .flatMap { case (fileName, text) => text.split("[^\\w\\d]") }
       .map(word => (word, 1))
       .reduceByKey(_ + _)
-      .sortBy(tuple => tuple._2, false)
+      .sortBy(tuple => tuple._2, ascending=false)
       .collect()
 
     spark.stop()

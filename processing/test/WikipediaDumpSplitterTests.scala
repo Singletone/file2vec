@@ -7,9 +7,26 @@ class WikipediaDumpSplitterTests extends FlatSpec {
     assert(WikipediaDumpSplitter("").length == 0)
   }
 
-  it should "return correct number of content" in {
-    assert(WikipediaDumpSplitter("[[0]]").length == 1)
-    assert(WikipediaDumpSplitter("[[0]][[1]]").length == 2)
-    assert(WikipediaDumpSplitter("[[0]]0[[1]]1").length == 2)
+  it should "return correct number of articles" in {
+    assert(WikipediaDumpSplitter("[[T-90]]").length == 1)
+    assert(WikipediaDumpSplitter("[[Merkava]][[SU-27]]").length == 2)
+    assert(WikipediaDumpSplitter("[[MiG-29]]About MiG.[[Cockatoo]]About cockatoo.").length == 2)
+  }
+
+  it should "create separate titles and bodies" in {
+    assert(WikipediaDumpSplitter("[[T-90]]About T-90.").sameElements(Array(("T-90", "About T-90."))))
+    assert(WikipediaDumpSplitter("[[T-90]]About T-90.[[MiG-29]]About MiG.").sameElements(
+      Array(("T-90", "About T-90."), ("MiG-29", "About MiG."))))
+    assert(WikipediaDumpSplitter("[[T-90]]About T-90.[[MiG-29]]About MiG.[[Empty]]").sameElements(
+      Array(("T-90", "About T-90."), ("MiG-29", "About MiG."), ("Empty", ""))))
+  }
+
+  it should "split title tag from body and extract title" in {
+    assert(WikipediaDumpSplitter.asTitleBody("[[Empty]]") == ("Empty", ""))
+    assert(WikipediaDumpSplitter.asTitleBody("[[T-90]]About T-90.") == ("T-90", "About T-90."))
+  }
+
+  it should "extract title" in {
+    assert(WikipediaDumpSplitter.asTitle("[[Empty]]") == "Empty")
   }
 }
