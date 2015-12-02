@@ -1,5 +1,12 @@
 # Dirs
-data/
+data/Datasets/GoogleNews
+data/Datasets/IMDB
+data/Datasets/Mojito
+data/Datasets/RottenTomatos-Kaggle
+data/Datasets/Text8
+data/Datasets/Wikipedia
+data/Experiments
+data/WordEmbeddings
 
 # Executables
 *.sh
