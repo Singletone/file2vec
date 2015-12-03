@@ -1,11 +1,15 @@
+import extraction.WikipediaExtractor
 import org.apache.spark._
 
-object controller {
+object main {
   def main(args: Array[String]) {
     val path = "../data/Datasets/Wikipedia-min/*.txt.gz"
 
     val conf = new SparkConf().setAppName("Spark Pi").setMaster("local[4]")
     val spark = new SparkContext(conf)
+
+    val wikiExtractor = new WikipediaExtractor(spark)
+    wikiExtractor.extract(path)
 
     val words = spark
       .wholeTextFiles(path)
