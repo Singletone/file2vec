@@ -1,4 +1,6 @@
-package extraction
+package transformation
+
+import extraction.Tokenizer
 
 abstract class SlidingWindow(tokenizer: Tokenizer) {
   def sliding(text: String, size: Int): Array[Array[String]] = {

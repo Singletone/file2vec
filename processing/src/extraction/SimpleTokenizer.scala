@@ -1,6 +1,6 @@
 package extraction
 
-class WhiteSpaceTokenizer extends Tokenizer {
+class SimpleTokenizer extends Tokenizer {
   val wordSeparator = "\\s".r
 
   def tokenize(text: String): Array[String] = {

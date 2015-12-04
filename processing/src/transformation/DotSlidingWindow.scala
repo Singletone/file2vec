@@ -1,4 +1,6 @@
-package extraction
+package transformation
+
+import extraction.Tokenizer
 
 class DotSlidingWindow(tokenizer: Tokenizer) extends SlidingWindow(tokenizer) {
   val sentenceSeparator = "\\.".r
