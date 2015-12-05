@@ -1,20 +1,18 @@
-package extraction
-
-object WikipediaDumpSplitter {
+object Split {
   val articlePattern = "(\\[\\[[^\\]]+\\]\\])([^\\[]*)".r
   val bracketsPattern = "[\\[\\]]".r
 
   def apply(dump: String): Array[(String, String)] = {
     articlePattern
       .findAllIn(dump)
-      .map(asTitleBody)
+      .map(asTitleText)
       .toArray
   }
 
-  def asTitleBody(article: String): (String, String) = {
-    val articlePattern(title, body) = article
+  def asTitleText(article: String): (String, String) = {
+    val articlePattern(title, text) = article
 
-    (asTitle(title), body)
+    (asTitle(title), text)
   }
 
   def asTitle(title: String): String = {

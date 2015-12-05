@@ -1,24 +1,29 @@
-import extraction.WikipediaExtractor
-import org.apache.spark._
+import java.io.StringReader
+
+import edu.stanford.nlp.ling.CoreAnnotations.TextAnnotation
+import edu.stanford.nlp.ling.CoreLabel
+import edu.stanford.nlp.process.{PTBTokenizer, CoreLabelTokenFactory}
+import org.apache.spark.{SparkConf, SparkContext}
 
 object main {
   def main(args: Array[String]) {
-    val path = "../data/Datasets/Wikipedia-min/*.txt.gz"
+    val sparkConf = new SparkConf()
+      .setAppName("Wikipedia ETL")
+      .setMaster("local[4]")
 
-    val conf = new SparkConf().setAppName("Spark Pi").setMaster("local[4]")
-    val spark = new SparkContext(conf)
+    val spark = new SparkContext(sparkConf)
 
-    val wikiExtractor = new WikipediaExtractor(spark)
-    wikiExtractor.extract(path)
+    val path = "../data/Datasets/Wikipedia-min/*-wiki-*.txt.gz"
 
     val words = spark
       .wholeTextFiles(path)
-      .flatMap { case (fileName, text) => text.split("[^\\w\\d]") }
-      .map(word => (word, 1))
+      .flatMap({ case (fileName, content) => Split(content) })
+      .flatMap({ case (title, text) => Tokenize(text) })
+      .map(word => (word.toLowerCase, 1))
       .reduceByKey(_ + _)
-      .sortBy(tuple => tuple._2, ascending=false)
+      .sortBy({ case (word, count) => count }, ascending=false)
       .collect()
 
-    spark.stop()
+    words.foreach({ case (word, count) => println((word, count)) })
   }
 }
