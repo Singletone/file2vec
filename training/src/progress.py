@@ -35,6 +35,10 @@ class Progress:
 
 
     def update(self, value, **kwargs):
+        if self.maxValue > 100:
+            if (value - self.maxValue % 100) % (self.maxValue / 100) != 0:
+                return
+
         params = dict(self.__dict__, **kwargs)
 
         params['value'] = value

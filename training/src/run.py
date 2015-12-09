@@ -1,7 +1,4 @@
-import time
-import progress
+import word2vec
 
-with progress.start('Reading training tensor: %(percentage)i%%. Elapsed: %(elapsed)s', 99) as update:
-    for i in range(100):
-        update(i)
-        time.sleep(0.02)
+filePath = '../../data/WordEmbeddings/wiki_full_s200_w10_mc20_hs1.bin'
+wordIndexMap, embeddings = word2vec.load(filePath)
